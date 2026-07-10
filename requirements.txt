@@ -1,0 +1,7 @@
+numpy>=1.24
+pandas>=2.2
+matplotlib>=3.8
+tqdm>=4.66
+scikit-learn>=1.4
+rank-bm25>=0.2.2
+sentence-transformers>=3.0
