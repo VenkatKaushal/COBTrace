@@ -1,0 +1,4665 @@
+{
+  "dataset_name": "cbi_traceability_batch1",
+  "schema_version": "3.0",
+  "requirement_count": 40,
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "requirement": "The system shall initialize transaction processing, open the transaction and portfolio files, and then process transactions until end-of-file or the error threshold is exceeded.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "0000-MAIN",
+            "role": "entry point and main control flow"
+          },
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "1000-INITIALIZE",
+            "role": "open input and portfolio files"
+          },
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2000-PROCESS-TRANSACTIONS",
+            "role": "transaction read loop"
+          },
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "3000-TERMINATE",
+            "role": "shutdown and final counts"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "0000-MAIN",
+            "code": "0000-MAIN.\n           PERFORM 1000-INITIALIZE\n           \n           IF WS-TRAN-STATUS = '00'\n               PERFORM 2000-PROCESS-TRANSACTIONS\n                   UNTIL END-OF-FILE\n                   OR WS-ERROR-COUNT > 100",
+            "supports_requirement": [
+              "REQ-001"
+            ]
+          },
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "1000-INITIALIZE",
+            "code": "1000-INITIALIZE.\n           INITIALIZE WS-FILE-STATUS\n                      WS-COUNTERS\n           SET MORE-RECORDS TO TRUE\n           \n           OPEN INPUT TRANSACTION-FILE\n           OPEN I-O PORTFOLIO-FILE",
+            "supports_requirement": [
+              "REQ-001"
+            ]
+          }
+        ],
+        "rationale": "The main paragraph drives initialization, then loops through transaction records until EOF or the error cap is reached."
+      }
+    },
+    {
+      "id": "REQ-002",
+      "requirement": "The system shall report and handle transaction-file open failures before any processing begins.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "1000-INITIALIZE",
+            "role": "open transaction file and detect open error"
+          },
+          {
+            "file": "ERRHAND.cpy",
+            "block": "ERROR-HANDLING",
+            "role": "shared error record"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "1000-INITIALIZE",
+            "code": "OPEN INPUT TRANSACTION-FILE\n           IF WS-TRAN-STATUS NOT = '00'\n               MOVE 'Error opening transaction file' TO ERR-TEXT\n               PERFORM 9000-ERROR-ROUTINE",
+            "supports_requirement": [
+              "REQ-002"
+            ]
+          },
+          {
+            "file": "ERRHAND.cpy",
+            "block": "ERROR-HANDLING",
+            "code": "01  ERR-MESSAGE.\n           05  ERR-TIMESTAMP.\n               10  ERR-DATE        PIC X(10).\n               10  ERR-TIME        PIC X(8).\n           05  ERR-PROGRAM         PIC X(8).",
+            "supports_requirement": [
+              "REQ-002"
+            ]
+          }
+        ],
+        "rationale": "The program explicitly checks the transaction file status and routes failures into the shared error structure."
+      }
+    },
+    {
+      "id": "REQ-003",
+      "requirement": "The system shall report and handle portfolio-file open failures before updating any records.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "1000-INITIALIZE",
+            "role": "open portfolio file and detect open error"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "1000-INITIALIZE",
+            "code": "OPEN I-O PORTFOLIO-FILE\n           IF WS-PORT-STATUS NOT = '00'\n               MOVE 'Error opening portfolio file' TO ERR-TEXT\n               PERFORM 9000-ERROR-ROUTINE",
+            "supports_requirement": [
+              "REQ-003"
+            ]
+          }
+        ],
+        "rationale": "The initialization path checks the portfolio file status and routes any failure to the error routine."
+      }
+    },
+    {
+      "id": "REQ-004",
+      "requirement": "The system shall read transaction records sequentially and stop when the transaction file reaches end-of-file.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2000-PROCESS-TRANSACTIONS",
+            "role": "sequential read loop"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2000-PROCESS-TRANSACTIONS",
+            "code": "READ TRANSACTION-FILE\n               AT END\n                   SET END-OF-FILE TO TRUE\n               NOT AT END\n                   ADD 1 TO WS-READ-COUNT\n                   PERFORM 2100-VALIDATE-TRANSACTION\n           END-READ",
+            "supports_requirement": [
+              "REQ-004"
+            ]
+          }
+        ],
+        "rationale": "The read paragraph performs sequential access and sets EOF when no more transaction records remain."
+      }
+    },
+    {
+      "id": "REQ-005",
+      "requirement": "The system shall verify that each transaction references a valid portfolio before continuing with type and amount checks.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2100-VALIDATE-TRANSACTION",
+            "role": "validation ordering"
+          },
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2110-CHECK-PORTFOLIO",
+            "role": "portfolio existence validation"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2100-VALIDATE-TRANSACTION",
+            "code": "PERFORM 2110-CHECK-PORTFOLIO\n           IF ERR-TEXT = SPACES\n               PERFORM 2120-CHECK-TRANSACTION-TYPE\n           END-IF",
+            "supports_requirement": [
+              "REQ-005"
+            ]
+          },
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2110-CHECK-PORTFOLIO",
+            "code": "IF TRN-PORTFOLIO-ID = SPACES\n               MOVE 'Portfolio ID is required' TO ERR-TEXT\n               EXIT PARAGRAPH\n           END-IF\n           \n           MOVE TRN-PORTFOLIO-ID TO PORT-ID\n           READ PORTFOLIO-FILE",
+            "supports_requirement": [
+              "REQ-005"
+            ]
+          }
+        ],
+        "rationale": "Portfolio validation is executed first, and later checks only run when no error text has been set."
+      }
+    },
+    {
+      "id": "REQ-006",
+      "requirement": "The system shall reject transactions with missing portfolio identifiers.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2110-CHECK-PORTFOLIO",
+            "role": "required portfolio identifier check"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2110-CHECK-PORTFOLIO",
+            "code": "IF TRN-PORTFOLIO-ID = SPACES\n               MOVE 'Portfolio ID is required' TO ERR-TEXT\n               EXIT PARAGRAPH",
+            "supports_requirement": [
+              "REQ-006"
+            ]
+          }
+        ],
+        "rationale": "A blank portfolio identifier is trapped explicitly and converted into a validation error message."
+      }
+    },
+    {
+      "id": "REQ-007",
+      "requirement": "The system shall reject transactions whose portfolio identifier does not exist in the portfolio file.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2110-CHECK-PORTFOLIO",
+            "role": "portfolio lookup and invalid key handling"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2110-CHECK-PORTFOLIO",
+            "code": "MOVE TRN-PORTFOLIO-ID TO PORT-ID\n           READ PORTFOLIO-FILE\n               INVALID KEY\n                   STRING 'Invalid Portfolio ID: '\n                          TRN-PORTFOLIO-ID\n                     DELIMITED BY SIZE\n                     INTO ERR-TEXT",
+            "supports_requirement": [
+              "REQ-007"
+            ]
+          }
+        ],
+        "rationale": "The READ statement uses INVALID KEY handling to mark unknown portfolio identifiers as invalid."
+      }
+    },
+    {
+      "id": "REQ-008",
+      "requirement": "The system shall accept only the defined transaction types BU, SL, TR, and FE.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2120-CHECK-TRANSACTION-TYPE",
+            "role": "transaction type validation"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2120-CHECK-TRANSACTION-TYPE",
+            "code": "EVALUATE TRN-TYPE\n               WHEN 'BU'\n               WHEN 'SL'\n               WHEN 'TR'\n               WHEN 'FE'\n                   CONTINUE\n               WHEN OTHER\n                   STRING 'Invalid Transaction Type: '\n                          TRN-TYPE\n                     DELIMITED BY SIZE\n                     INTO ERR-TEXT",
+            "supports_requirement": [
+              "REQ-008"
+            ]
+          }
+        ],
+        "rationale": "The validation enumerates the four accepted transaction types and rejects everything else."
+      }
+    },
+    {
+      "id": "REQ-009",
+      "requirement": "The system shall require positive quantity values for non-transfer transactions.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2130-CHECK-AMOUNTS",
+            "role": "quantity validation"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2130-CHECK-AMOUNTS",
+            "code": "IF TRN-QUANTITY <= ZERO\n               MOVE 'Quantity must be greater than zero' TO ERR-TEXT\n               EXIT PARAGRAPH",
+            "supports_requirement": [
+              "REQ-009"
+            ]
+          }
+        ],
+        "rationale": "The quantity check rejects zero or negative values before processing continues."
+      }
+    },
+    {
+      "id": "REQ-010",
+      "requirement": "The system shall require positive price values for buy and sell transactions.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2130-CHECK-AMOUNTS",
+            "role": "price validation"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2130-CHECK-AMOUNTS",
+            "code": "IF TRN-PRICE <= ZERO AND TRN-TYPE NOT = 'TR'\n               MOVE 'Price must be greater than zero' TO ERR-TEXT\n               EXIT PARAGRAPH",
+            "supports_requirement": [
+              "REQ-010"
+            ]
+          }
+        ],
+        "rationale": "The code allows transfer transactions to bypass the price check but rejects non-transfer records with nonpositive prices."
+      }
+    },
+    {
+      "id": "REQ-011",
+      "requirement": "The system shall require positive transaction amounts for buy, sell, and fee transactions.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2130-CHECK-AMOUNTS",
+            "role": "amount validation"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2130-CHECK-AMOUNTS",
+            "code": "IF TRN-AMOUNT <= ZERO AND TRN-TYPE NOT = 'TR'\n               MOVE 'Amount must be greater than zero' TO ERR-TEXT\n               EXIT PARAGRAPH",
+            "supports_requirement": [
+              "REQ-011"
+            ]
+          }
+        ],
+        "rationale": "The amount validation rejects nonpositive values for all non-transfer transactions."
+      }
+    },
+    {
+      "id": "REQ-012",
+      "requirement": "The system shall route successful validated transactions into the position update flow based on transaction type.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2200-UPDATE-POSITIONS",
+            "role": "transaction-type dispatch"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2200-UPDATE-POSITIONS",
+            "code": "EVALUATE TRN-TYPE\n               WHEN 'BU'\n                   PERFORM 2210-PROCESS-BUY\n               WHEN 'SL'\n                   PERFORM 2220-PROCESS-SELL\n               WHEN 'TR'\n                   PERFORM 2230-PROCESS-TRANSFER\n               WHEN 'FE'\n                   PERFORM 2240-PROCESS-FEE",
+            "supports_requirement": [
+              "REQ-012"
+            ]
+          }
+        ],
+        "rationale": "The dispatcher maps each transaction code to a dedicated processing paragraph."
+      }
+    },
+    {
+      "id": "REQ-013",
+      "requirement": "The system shall update portfolio holdings and total cost when a buy transaction is processed.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2210-PROCESS-BUY",
+            "role": "buy transaction posting"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2210-PROCESS-BUY",
+            "code": "ADD TRN-QUANTITY TO PORT-TOTAL-UNITS\n           ADD TRN-AMOUNT   TO PORT-TOTAL-COST\n           \n           REWRITE PORTFOLIO-RECORD",
+            "supports_requirement": [
+              "REQ-013"
+            ]
+          }
+        ],
+        "rationale": "Buy processing adds quantity and amount to the portfolio record before rewriting it."
+      }
+    },
+    {
+      "id": "REQ-014",
+      "requirement": "The system shall reject buy transactions when the target portfolio record cannot be found.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2210-PROCESS-BUY",
+            "role": "portfolio lookup for buy"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2210-PROCESS-BUY",
+            "code": "READ PORTFOLIO-FILE\n               INVALID KEY\n                   MOVE 'Portfolio not found for update' TO ERR-TEXT\n                   PERFORM 9000-ERROR-ROUTINE\n                   EXIT PARAGRAPH",
+            "supports_requirement": [
+              "REQ-014"
+            ]
+          }
+        ],
+        "rationale": "The buy path depends on locating the portfolio record and sends missing-key cases to error handling."
+      }
+    },
+    {
+      "id": "REQ-015",
+      "requirement": "The system shall prevent sell transactions when the portfolio does not contain enough units.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2220-PROCESS-SELL",
+            "role": "sell validation against existing holdings"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2220-PROCESS-SELL",
+            "code": "IF PORT-TOTAL-UNITS < TRN-QUANTITY\n               MOVE 'Insufficient units for sale' TO ERR-TEXT\n               PERFORM 9000-ERROR-ROUTINE\n               EXIT PARAGRAPH",
+            "supports_requirement": [
+              "REQ-015"
+            ]
+          }
+        ],
+        "rationale": "The sell paragraph compares available units with requested quantity and blocks insufficient-holdings cases."
+      }
+    },
+    {
+      "id": "REQ-016",
+      "requirement": "The system shall decrease portfolio holdings and total cost when a sell transaction is valid.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2220-PROCESS-SELL",
+            "role": "sell posting"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2220-PROCESS-SELL",
+            "code": "SUBTRACT TRN-QUANTITY FROM PORT-TOTAL-UNITS\n           SUBTRACT TRN-AMOUNT   FROM PORT-TOTAL-COST\n           \n           REWRITE PORTFOLIO-RECORD",
+            "supports_requirement": [
+              "REQ-016"
+            ]
+          }
+        ],
+        "rationale": "Valid sell transactions reduce quantity and cost before persisting the updated portfolio record."
+      }
+    },
+    {
+      "id": "REQ-017",
+      "requirement": "The system shall treat transfer processing as not implemented and send it to the error routine.",
+      "ground_truth": {
+        "status": "NOT_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2230-PROCESS-TRANSFER",
+            "role": "transfer placeholder"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2230-PROCESS-TRANSFER",
+            "code": "2230-PROCESS-TRANSFER.\n           MOVE 'Transfer processing not implemented' TO ERR-TEXT\n           PERFORM 9000-ERROR-ROUTINE",
+            "supports_requirement": [
+              "REQ-017"
+            ]
+          }
+        ],
+        "rationale": "The transfer paragraph is explicitly stubbed out with a not-implemented message."
+      }
+    },
+    {
+      "id": "REQ-018",
+      "requirement": "The system shall apply fee transactions by reducing the portfolio total cost and rewriting the portfolio record.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2240-PROCESS-FEE",
+            "role": "fee posting"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2240-PROCESS-FEE",
+            "code": "SUBTRACT TRN-AMOUNT FROM PORT-TOTAL-COST\n           \n           REWRITE PORTFOLIO-RECORD",
+            "supports_requirement": [
+              "REQ-018"
+            ]
+          }
+        ],
+        "rationale": "Fee processing subtracts the fee amount from the portfolio cost and saves the record."
+      }
+    },
+    {
+      "id": "REQ-019",
+      "requirement": "The system shall perform audit-trail processing after each transaction update path.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2200-UPDATE-POSITIONS",
+            "role": "post-update audit invocation"
+          },
+          {
+            "file": "AUDITLOG.cpy",
+            "block": "AUDIT-RECORD",
+            "role": "audit record layout"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "2200-UPDATE-POSITIONS",
+            "code": "PERFORM 2300-UPDATE-AUDIT-TRAIL",
+            "supports_requirement": [
+              "REQ-019"
+            ]
+          },
+          {
+            "file": "AUDITLOG.cpy",
+            "block": "AUDIT-RECORD",
+            "code": "01  AUDIT-RECORD.\n           05  AUD-HEADER.\n               10  AUD-TIMESTAMP     PIC X(26).\n               10  AUD-SYSTEM-ID     PIC X(8).\n               10  AUD-USER-ID       PIC X(8).",
+            "supports_requirement": [
+              "REQ-019"
+            ]
+          }
+        ],
+        "rationale": "The update section invokes audit processing and the audit copybook defines the target audit fields."
+      }
+    },
+    {
+      "id": "REQ-020",
+      "requirement": "The system shall stop transaction processing once the error counter exceeds the configured limit.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "0000-MAIN",
+            "role": "loop termination condition"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "0000-MAIN",
+            "code": "PERFORM 2000-PROCESS-TRANSACTIONS\n                   UNTIL END-OF-FILE\n                   OR WS-ERROR-COUNT > 100",
+            "supports_requirement": [
+              "REQ-020"
+            ]
+          }
+        ],
+        "rationale": "The main loop includes an explicit error-count cutoff so processing cannot continue indefinitely after repeated failures."
+      }
+    },
+    {
+      "id": "REQ-021",
+      "requirement": "The system shall terminate cleanly by closing input and output files and displaying summary counts.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "3000-TERMINATE",
+            "role": "program shutdown and reporting"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTTRAN.cbl",
+            "block": "3000-TERMINATE",
+            "code": "CLOSE PORTFOLIO-FILE\n                 TRANSACTION-FILE\n           \n           DISPLAY 'Transactions read: ' WS-READ-COUNT\n           DISPLAY 'Transactions processed: ' WS-PROCESS-COUNT\n           DISPLAY 'Errors occurred: ' WS-ERROR-COUNT",
+            "supports_requirement": [
+              "REQ-021"
+            ]
+          }
+        ],
+        "rationale": "Termination closes both files and reports the totals for read, processed, and errored records."
+      }
+    },
+    {
+      "id": "REQ-022",
+      "requirement": "The system shall initialize the portfolio update program by clearing counters and opening both the portfolio and update files.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTUPDT.cbl",
+            "block": "0000-MAIN",
+            "role": "program entry and initialization"
+          },
+          {
+            "file": "PORTUPDT.cbl",
+            "block": "1000-INITIALIZE",
+            "role": "file open and setup"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTUPDT.cbl",
+            "block": "1000-INITIALIZE",
+            "code": "INITIALIZE WS-WORK-AREAS\n           \n           OPEN I-O   PORTFOLIO-FILE\n           OPEN INPUT UPDATE-FILE",
+            "supports_requirement": [
+              "REQ-022"
+            ]
+          }
+        ],
+        "rationale": "The update program clears working storage and opens both files before any record maintenance begins."
+      }
+    },
+    {
+      "id": "REQ-023",
+      "requirement": "The system shall detect and report file-open failures in the portfolio update program.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTUPDT.cbl",
+            "block": "1000-INITIALIZE",
+            "role": "file-status checking"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTUPDT.cbl",
+            "block": "1000-INITIALIZE",
+            "code": "IF NOT WS-SUCCESS-STATUS OR \n              NOT WS-UPDT-SUCCESS\n              DISPLAY 'Error opening files: ' \n                      'PORT=' WS-FILE-STATUS\n                      'UPDT=' WS-UPDT-STATUS\n              MOVE WS-ERROR TO WS-RETURN-CODE",
+            "supports_requirement": [
+              "REQ-023"
+            ]
+          }
+        ],
+        "rationale": "Open-status validation is explicit and failure is converted into an error return code."
+      }
+    },
+    {
+      "id": "REQ-024",
+      "requirement": "The system shall read the update file sequentially until end-of-file.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTUPDT.cbl",
+            "block": "2000-PROCESS",
+            "role": "sequential update-file read loop"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTUPDT.cbl",
+            "block": "2000-PROCESS",
+            "code": "READ UPDATE-FILE\n               AT END\n                   SET END-OF-FILE TO TRUE\n               NOT AT END\n                   PERFORM 2100-PROCESS-UPDATE\n           END-READ",
+            "supports_requirement": [
+              "REQ-024"
+            ]
+          }
+        ],
+        "rationale": "The update process reads each sequential record and sets the EOF flag when the file is exhausted."
+      }
+    },
+    {
+      "id": "REQ-025",
+      "requirement": "The system shall locate the matching portfolio record before applying an update.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTUPDT.cbl",
+            "block": "2100-PROCESS-UPDATE",
+            "role": "move update key into portfolio key and read portfolio"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTUPDT.cbl",
+            "block": "2100-PROCESS-UPDATE",
+            "code": "MOVE UPDT-KEY TO PORT-KEY\n           \n           READ PORTFOLIO-FILE\n           \n           IF WS-SUCCESS-STATUS\n               PERFORM 2200-APPLY-UPDATE",
+            "supports_requirement": [
+              "REQ-025"
+            ]
+          }
+        ],
+        "rationale": "The update key is copied into the portfolio key and then used to read the indexed portfolio file."
+      }
+    },
+    {
+      "id": "REQ-026",
+      "requirement": "The system shall increment the update error count when a portfolio record is not found during update processing.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTUPDT.cbl",
+            "block": "2100-PROCESS-UPDATE",
+            "role": "missing-record handling"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTUPDT.cbl",
+            "block": "2100-PROCESS-UPDATE",
+            "code": "ELSE\n               ADD 1 TO WS-ERROR-COUNT\n               DISPLAY 'Record not found: ' PORT-KEY",
+            "supports_requirement": [
+              "REQ-026"
+            ]
+          }
+        ],
+        "rationale": "The missing-record branch increases the error counter and emits a not-found message."
+      }
+    },
+    {
+      "id": "REQ-027",
+      "requirement": "The system shall update portfolio status, client name, or total value based on the update action code.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTUPDT.cbl",
+            "block": "2200-APPLY-UPDATE",
+            "role": "action-based field selection"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTUPDT.cbl",
+            "block": "2200-APPLY-UPDATE",
+            "code": "EVALUATE TRUE\n               WHEN UPDT-STATUS\n                   MOVE UPDT-NEW-VALUE TO PORT-STATUS\n               WHEN UPDT-NAME\n                   MOVE UPDT-NEW-VALUE TO PORT-CLIENT-NAME\n               WHEN UPDT-VALUE\n                   MOVE UPDT-NEW-VALUE TO WS-NUMERIC-WORK\n                   MOVE WS-NUMERIC-WORK TO PORT-TOTAL-VALUE",
+            "supports_requirement": [
+              "REQ-027"
+            ]
+          }
+        ],
+        "rationale": "The update paragraph routes action codes to distinct portfolio fields and handles numeric conversion for value updates."
+      }
+    },
+    {
+      "id": "REQ-028",
+      "requirement": "The system shall rewrite the portfolio record after each successful update and maintain update statistics.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTUPDT.cbl",
+            "block": "2200-APPLY-UPDATE",
+            "role": "record rewrite and count maintenance"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTUPDT.cbl",
+            "block": "2200-APPLY-UPDATE",
+            "code": "REWRITE PORT-RECORD\n           \n           IF WS-SUCCESS-STATUS\n               ADD 1 TO WS-UPDATE-COUNT",
+            "supports_requirement": [
+              "REQ-028"
+            ]
+          }
+        ],
+        "rationale": "A successful rewrite increments the update count, tying persistence to operational statistics."
+      }
+    },
+    {
+      "id": "REQ-029",
+      "requirement": "The system shall close portfolio update files and move the final return code to the program return area at termination.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTUPDT.cbl",
+            "block": "3000-TERMINATE",
+            "role": "shutdown and return code handling"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTUPDT.cbl",
+            "block": "3000-TERMINATE",
+            "code": "CLOSE PORTFOLIO-FILE\n                 UPDATE-FILE\n           \n           DISPLAY 'Updates processed: ' WS-UPDATE-COUNT\n           DISPLAY 'Errors occurred:  ' WS-ERROR-COUNT\n           \n           MOVE WS-RETURN-CODE TO RETURN-CODE",
+            "supports_requirement": [
+              "REQ-029"
+            ]
+          }
+        ],
+        "rationale": "The termination paragraph handles cleanup, summary reporting, and return-code propagation."
+      }
+    },
+    {
+      "id": "REQ-030",
+      "requirement": "The system shall validate portfolio identifiers by enforcing the PORT prefix and a four-digit numeric suffix.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTVALD.cbl",
+            "block": "1000-VALIDATE-ID",
+            "role": "portfolio ID validation"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTVALD.cbl",
+            "block": "1000-VALIDATE-ID",
+            "code": "IF LS-INPUT-VALUE(1:4) NOT = VAL-ID-PREFIX\n               MOVE VAL-INVALID-ID TO LS-RETURN-CODE\n               MOVE VAL-ERR-ID TO LS-ERROR-MSG\n               EXIT PARAGRAPH\n           END-IF\n           \n           MOVE LS-INPUT-VALUE(5:4) TO VAL-NUMERIC-CHECK\n           IF VAL-NUMERIC-CHECK IS NOT NUMERIC",
+            "supports_requirement": [
+              "REQ-030"
+            ]
+          }
+        ],
+        "rationale": "The validator checks both the required prefix and the numeric suffix before accepting a portfolio ID."
+      }
+    },
+    {
+      "id": "REQ-031",
+      "requirement": "The system shall validate account numbers as numeric and non-zero input.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTVALD.cbl",
+            "block": "2000-VALIDATE-ACCOUNT",
+            "role": "account validation"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTVALD.cbl",
+            "block": "2000-VALIDATE-ACCOUNT",
+            "code": "IF LS-INPUT-VALUE IS NOT NUMERIC\n           OR LS-INPUT-VALUE = ZEROS\n               MOVE VAL-INVALID-ACCT TO LS-RETURN-CODE\n               MOVE VAL-ERR-ACCT TO LS-ERROR-MSG\n               EXIT PARAGRAPH",
+            "supports_requirement": [
+              "REQ-031"
+            ]
+          }
+        ],
+        "rationale": "The account validator rejects alphabetic content and all-zero values."
+      }
+    },
+    {
+      "id": "REQ-032",
+      "requirement": "The system shall accept only supported investment types during validation.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTVALD.cbl",
+            "block": "3000-VALIDATE-TYPE",
+            "role": "investment type validation"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTVALD.cbl",
+            "block": "3000-VALIDATE-TYPE",
+            "code": "IF LS-INPUT-VALUE NOT = 'STK'\n              AND NOT = 'BND'\n              AND NOT = 'MMF'\n              AND NOT = 'ETF'\n               MOVE VAL-INVALID-TYPE TO LS-RETURN-CODE\n               MOVE VAL-ERR-TYPE TO LS-ERROR-MSG",
+            "supports_requirement": [
+              "REQ-032"
+            ]
+          }
+        ],
+        "rationale": "The validator enumerates the supported investment categories and rejects all others."
+      }
+    },
+    {
+      "id": "REQ-033",
+      "requirement": "The system shall validate that transaction amounts fall within the permitted minimum and maximum range.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTVALD.cbl",
+            "block": "4000-VALIDATE-AMOUNT",
+            "role": "amount range validation"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTVALD.cbl",
+            "block": "4000-VALIDATE-AMOUNT",
+            "code": "MOVE LS-INPUT-VALUE TO VAL-TEMP-NUM\n           \n           IF VAL-TEMP-NUM < VAL-MIN-AMOUNT\n           OR VAL-TEMP-NUM > VAL-MAX-AMOUNT\n               MOVE VAL-INVALID-AMT TO LS-RETURN-CODE\n               MOVE VAL-ERR-AMT TO LS-ERROR-MSG",
+            "supports_requirement": [
+              "REQ-033"
+            ]
+          }
+        ],
+        "rationale": "The amount validator applies the configured min and max bounds and returns a dedicated error code on violation."
+      }
+    },
+    {
+      "id": "REQ-034",
+      "requirement": "The system shall use the validation return codes and error messages defined in the validation copybook.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTVAL.cpy",
+            "block": "VAL-RETURN-CODES",
+            "role": "validation codes"
+          },
+          {
+            "file": "PORTVALD.cbl",
+            "block": "0000-MAIN",
+            "role": "validation return assignment"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTVAL.cpy",
+            "block": "VAL-RETURN-CODES",
+            "code": "01  VAL-RETURN-CODES.\n           05  VAL-SUCCESS         PIC S9(4) VALUE +0.\n           05  VAL-INVALID-ID      PIC S9(4) VALUE +1.\n           05  VAL-INVALID-ACCT    PIC S9(4) VALUE +2.",
+            "supports_requirement": [
+              "REQ-034"
+            ]
+          }
+        ],
+        "rationale": "The validation program returns the standard codes and messages defined in the copybook, which makes outcomes machine-readable."
+      }
+    },
+    {
+      "id": "REQ-035",
+      "requirement": "The system shall connect to DB2 and invoke the DB2 error routine when the connection fails.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "DBPROC.cpy",
+            "block": "CONNECT-TO-DB2",
+            "role": "DB2 connection setup"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "DBPROC.cpy",
+            "block": "CONNECT-TO-DB2",
+            "code": "CONNECT-TO-DB2.\n           EXEC SQL\n               CONNECT TO POSMVP\n           END-EXEC\n           IF SQLCODE NOT = 0\n               MOVE 'Connection failed' TO DB2-ERROR-TEXT\n               PERFORM DB2-ERROR-ROUTINE",
+            "supports_requirement": [
+              "REQ-035"
+            ]
+          }
+        ],
+        "rationale": "The connection paragraph attempts the DB2 connect and routes any failure into the shared error routine."
+      }
+    },
+    {
+      "id": "REQ-036",
+      "requirement": "The system shall commit work and reset the DB2 connection during disconnect processing.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "DBPROC.cpy",
+            "block": "DISCONNECT-FROM-DB2",
+            "role": "DB2 disconnect sequence"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "DBPROC.cpy",
+            "block": "DISCONNECT-FROM-DB2",
+            "code": "DISCONNECT-FROM-DB2.\n           EXEC SQL\n               COMMIT WORK\n           END-EXEC\n           \n           EXEC SQL\n               CONNECT RESET\n           END-EXEC",
+            "supports_requirement": [
+              "REQ-036"
+            ]
+          }
+        ],
+        "rationale": "The disconnect routine performs a commit followed by connection reset, which is the full shutdown path."
+      }
+    },
+    {
+      "id": "REQ-037",
+      "requirement": "The system shall roll back DB2 work, populate the DB2 error message, and call the external error processor when a DB2 error occurs.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "DBPROC.cpy",
+            "block": "DB2-ERROR-ROUTINE",
+            "role": "DB2 failure handling"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "DBPROC.cpy",
+            "block": "DB2-ERROR-ROUTINE",
+            "code": "MOVE SQLCODE TO DB2-SQLCODE-TXT\n           MOVE SQLSTATE TO DB2-STATE\n           \n           EXEC SQL\n               ROLLBACK WORK\n           END-EXEC\n           \n           MOVE 'DB2ERROR' TO ERR-PROGRAM\n           MOVE DB2-ERROR-MESSAGE TO ERR-TEXT\n           CALL 'ERRPROC' USING ERR-MESSAGE",
+            "supports_requirement": [
+              "REQ-037"
+            ]
+          }
+        ],
+        "rationale": "The error routine captures SQL status, rolls back the unit of work, and passes the error record to the external processor."
+      }
+    },
+    {
+      "id": "REQ-038",
+      "requirement": "The system shall trigger DB2 error handling whenever SQLCODE is nonzero during status checks.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "DBPROC.cpy",
+            "block": "CHECK-SQL-STATUS",
+            "role": "status check wrapper"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "DBPROC.cpy",
+            "block": "CHECK-SQL-STATUS",
+            "code": "CHECK-SQL-STATUS.\n           IF SQLCODE NOT = 0\n               PERFORM DB2-ERROR-ROUTINE\n           END-IF",
+            "supports_requirement": [
+              "REQ-038"
+            ]
+          }
+        ],
+        "rationale": "The status-check paragraph is a thin wrapper that sends every SQL failure to the DB2 error handler."
+      }
+    },
+    {
+      "id": "REQ-039",
+      "requirement": "The system shall maintain checkpoint and restart control data for batch processing, including program status, phases, counters, and restart mode.",
+      "ground_truth": {
+        "status": "PARTIALLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "CKPRST.cpy",
+            "block": "CHECKPOINT-CONTROL",
+            "role": "checkpoint and restart data structure"
+          },
+          {
+            "file": "BCHCTL.cpy",
+            "block": "BATCH-CONTROL-RECORD",
+            "role": "job-level control and sequencing"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "CKPRST.cpy",
+            "block": "CHECKPOINT-CONTROL",
+            "code": "01  CHECKPOINT-CONTROL.\n           05  CK-HEADER.\n               10  CK-PROGRAM-ID       PIC X(8).\n               10  CK-RUN-DATE         PIC X(8).\n               10  CK-RUN-TIME         PIC X(6).\n               10  CK-STATUS           PIC X(1).",
+            "supports_requirement": [
+              "REQ-039"
+            ]
+          },
+          {
+            "file": "BCHCTL.cpy",
+            "block": "BATCH-CONTROL-RECORD",
+            "code": "01  BATCH-CONTROL-RECORD.\n           05  BCT-KEY.\n               10  BCT-JOB-NAME      PIC X(8).\n               10  BCT-PROCESS-DATE  PIC X(8).\n           05  BCT-DATA.\n               10  BCT-STATUS        PIC X(1).",
+            "supports_requirement": [
+              "REQ-039"
+            ]
+          }
+        ],
+        "rationale": "The batch control and checkpoint copybooks define restartable state, but the excerpt shows data definitions rather than executable orchestration."
+      }
+    },
+    {
+      "id": "REQ-040",
+      "requirement": "The system shall define standard process sequences for start-of-day, main processing, and end-of-day jobs.",
+      "ground_truth": {
+        "status": "PARTIALLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PRCSEQ.cpy",
+            "block": "STANDARD-SEQUENCES",
+            "role": "standard job sequencing definitions"
+          },
+          {
+            "file": "BCHCON.cpy",
+            "block": "BCT-PROC-NAMES",
+            "role": "named process constants"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PRCSEQ.cpy",
+            "block": "STANDARD-SEQUENCES",
+            "code": "01  STANDARD-SEQUENCES.\n           05  SEQ-START-OF-DAY.\n               10  FILLER            PIC X(8) VALUE 'INITDAY '.\n               10  FILLER            PIC X(8) VALUE 'CKPCLR  '.\n               10  FILLER            PIC X(8) VALUE 'DATEVAL '.",
+            "supports_requirement": [
+              "REQ-040"
+            ]
+          },
+          {
+            "file": "BCHCON.cpy",
+            "block": "BCT-PROC-NAMES",
+            "code": "05  BCT-PROC-NAMES.\n               10  BCT-START-OF-DAY   PIC X(8) VALUE 'STARTDAY'.\n               10  BCT-END-OF-DAY     PIC X(8) VALUE 'ENDDAY  '.",
+            "supports_requirement": [
+              "REQ-040"
+            ]
+          }
+        ],
+        "rationale": "The repository defines ordered process names and sequence blocks that support batch orchestration even though execution code is not shown here."
+      }
+    },
+    {
+      "id": "REQ-041",
+      "requirement": "The system shall dispatch portfolio maintenance commands to create, read, update, or delete processing based on the incoming function code.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTMSTR.cbl",
+            "block": "0000-MAIN",
+            "role": "entry point"
+          },
+          {
+            "file": "PORTMSTR.cbl",
+            "block": "1000-INITIALIZE",
+            "role": "open and prepare working state"
+          },
+          {
+            "file": "PORTMSTR.cbl",
+            "block": "2000-CREATE-PORTFOLIO",
+            "role": "create path"
+          },
+          {
+            "file": "PORTMSTR.cbl",
+            "block": "3000-READ-PORTFOLIO",
+            "role": "read path"
+          },
+          {
+            "file": "PORTMSTR.cbl",
+            "block": "4000-UPDATE-PORTFOLIO",
+            "role": "update path"
+          },
+          {
+            "file": "PORTMSTR.cbl",
+            "block": "5000-DELETE-PORTFOLIO",
+            "role": "delete path"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTMSTR.cbl",
+            "block": "0000-MAIN",
+            "code": "       0000-MAIN.\n           PERFORM 1000-INITIALIZE\n           \n           EVALUATE TRUE\n               WHEN CREATE-PORT\n                   PERFORM 2000-CREATE-PORTFOLIO\n               WHEN READ-PORT\n                   PERFORM 3000-READ-PORTFOLIO\n               WHEN UPDATE-PORT\n                   PERFORM 4000-UPDATE-PORTFOLIO",
+            "supports_requirement": [
+              "REQ-041"
+            ]
+          },
+          {
+            "file": "PORTMSTR.cbl",
+            "block": "0000-MAIN",
+            "code": "               WHEN DELETE-PORT\n                   PERFORM 5000-DELETE-PORTFOLIO\n               WHEN OTHER\n                   MOVE 'Invalid command' TO WS-ERROR-TEXT\n                   PERFORM 9000-ERROR\n           END-EVALUATE\n           \n           PERFORM 6000-TERMINATE",
+            "supports_requirement": [
+              "REQ-041"
+            ]
+          }
+        ],
+        "rationale": "The dispatch logic explicitly selects the portfolio create, read, update, or delete paragraph from the function code, and then terminates through the shared cleanup path."
+      }
+    },
+    {
+      "id": "REQ-042",
+      "requirement": "The system shall open the portfolio file during initialization and route file-open failures to the shared error routine.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTMSTR.cbl",
+            "block": "1000-INITIALIZE",
+            "role": "initialize and open file"
+          },
+          {
+            "file": "PORTMSTR.cbl",
+            "block": "9000-ERROR",
+            "role": "shared error handler"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTMSTR.cbl",
+            "block": "1000-INITIALIZE",
+            "code": "       1000-INITIALIZE.\n           INITIALIZE WS-WORK-AREAS\n           \n           OPEN I-O PORTFOLIO-FILE\n           IF NOT PORT-SUCCESS\n               MOVE 'Error opening Portfolio file' TO WS-ERROR-TEXT\n               PERFORM 9000-ERROR\n           END-IF",
+            "supports_requirement": [
+              "REQ-042"
+            ]
+          }
+        ],
+        "rationale": "Initialization opens the portfolio file in I-O mode and immediately transfers control to the error paragraph when the open does not succeed."
+      }
+    },
+    {
+      "id": "REQ-043",
+      "requirement": "The system shall validate portfolio master data before writing a new portfolio record.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTMSTR.cbl",
+            "block": "2000-CREATE-PORTFOLIO",
+            "role": "create request"
+          },
+          {
+            "file": "PORTMSTR.cbl",
+            "block": "2100-VALIDATE-PORTFOLIO",
+            "role": "validation step"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTMSTR.cbl",
+            "block": "2000-CREATE-PORTFOLIO",
+            "code": "       2000-CREATE-PORTFOLIO.\n      *----------------------------------------------------------------*\n      * Create new portfolio record\n      *----------------------------------------------------------------*\n           MOVE LS-PORTFOLIO TO PORTFOLIO-RECORD\n           \n           PERFORM 2100-VALIDATE-PORTFOLIO\n           IF WS-RETURN-CODE NOT = WS-SUCCESS\n               PERFORM 9000-ERROR",
+            "supports_requirement": [
+              "REQ-043"
+            ]
+          },
+          {
+            "file": "PORTMSTR.cbl",
+            "block": "2100-VALIDATE-PORTFOLIO",
+            "code": "       2100-VALIDATE-PORTFOLIO.\n      *----------------------------------------------------------------*\n      * Validate portfolio data\n      *----------------------------------------------------------------*\n           IF PORT-ID(1:4) NOT = 'PORT'\n              OR PORT-ID(5:5) IS NOT NUMERIC\n               MOVE 'Invalid Portfolio ID format' TO WS-ERROR-TEXT\n               MOVE WS-ERROR TO WS-RETURN-CODE\n               EXIT PARAGRAPH",
+            "supports_requirement": [
+              "REQ-043"
+            ]
+          }
+        ],
+        "rationale": "The create flow copies the request into the record area, validates the data, and only proceeds to WRITE after validation passes."
+      }
+    },
+    {
+      "id": "REQ-044",
+      "requirement": "The system shall read portfolio records and return either the matched record or a not-found error.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTMSTR.cbl",
+            "block": "3000-READ-PORTFOLIO",
+            "role": "read request"
+          },
+          {
+            "file": "PORTMSTR.cbl",
+            "block": "9000-ERROR",
+            "role": "error handling"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTMSTR.cbl",
+            "block": "3000-READ-PORTFOLIO",
+            "code": "       3000-READ-PORTFOLIO.\n      *----------------------------------------------------------------*\n      * Read portfolio record\n      *----------------------------------------------------------------*\n           MOVE LS-PORTFOLIO TO PORTFOLIO-RECORD\n           \n           READ PORTFOLIO-FILE\n           \n           EVALUATE TRUE\n               WHEN PORT-SUCCESS\n                   MOVE PORTFOLIO-RECORD TO LS-PORTFOLIO\n               WHEN PORT-NOT-FOUND",
+            "supports_requirement": [
+              "REQ-044"
+            ]
+          },
+          {
+            "file": "PORTMSTR.cbl",
+            "block": "3000-READ-PORTFOLIO",
+            "code": "                   MOVE 'Portfolio not found' TO WS-ERROR-TEXT\n                   PERFORM 9000-ERROR",
+            "supports_requirement": [
+              "REQ-044"
+            ]
+          }
+        ],
+        "rationale": "The read paragraph performs the file lookup, copies a successful match back to the linkage area, and routes missing keys to the shared error path."
+      }
+    },
+    {
+      "id": "REQ-045",
+      "requirement": "The system shall update an existing portfolio record only after validating the input and then rewriting the record.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTMSTR.cbl",
+            "block": "4000-UPDATE-PORTFOLIO",
+            "role": "update request"
+          },
+          {
+            "file": "PORTMSTR.cbl",
+            "block": "2100-VALIDATE-PORTFOLIO",
+            "role": "validation"
+          },
+          {
+            "file": "PORTMSTR.cbl",
+            "block": "4000-UPDATE-PORTFOLIO",
+            "role": "rewrite"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTMSTR.cbl",
+            "block": "4000-UPDATE-PORTFOLIO",
+            "code": "       4000-UPDATE-PORTFOLIO.\n      *----------------------------------------------------------------*\n      * Update portfolio record\n      *----------------------------------------------------------------*\n           MOVE LS-PORTFOLIO TO PORTFOLIO-RECORD\n           \n           PERFORM 2100-VALIDATE-PORTFOLIO\n           IF WS-RETURN-CODE NOT = WS-SUCCESS\n               PERFORM 9000-ERROR",
+            "supports_requirement": [
+              "REQ-045"
+            ]
+          },
+          {
+            "file": "PORTMSTR.cbl",
+            "block": "4000-UPDATE-PORTFOLIO",
+            "code": "           REWRITE PORTFOLIO-RECORD\n           \n           IF PORT-NOT-FOUND\n               MOVE 'Portfolio not found for update' TO WS-ERROR-TEXT\n               PERFORM 9000-ERROR",
+            "supports_requirement": [
+              "REQ-045"
+            ]
+          }
+        ],
+        "rationale": "The update path validates the request before rewriting the indexed record and sends missing-record conditions to the same error handling flow."
+      }
+    },
+    {
+      "id": "REQ-046",
+      "requirement": "The system shall delete a portfolio record when requested and report both missing-record and delete-error outcomes.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTMSTR.cbl",
+            "block": "5000-DELETE-PORTFOLIO",
+            "role": "delete request"
+          },
+          {
+            "file": "PORTMSTR.cbl",
+            "block": "9000-ERROR",
+            "role": "error handling"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTMSTR.cbl",
+            "block": "5000-DELETE-PORTFOLIO",
+            "code": "       5000-DELETE-PORTFOLIO.\n      *----------------------------------------------------------------*\n      * Delete portfolio record\n      *----------------------------------------------------------------*\n           MOVE LS-PORTFOLIO TO PORTFOLIO-RECORD\n           \n           DELETE PORTFOLIO-FILE\n           \n           IF PORT-NOT-FOUND\n               MOVE 'Portfolio not found for deletion' TO WS-ERROR-TEXT\n               PERFORM 9000-ERROR",
+            "supports_requirement": [
+              "REQ-046"
+            ]
+          },
+          {
+            "file": "PORTMSTR.cbl",
+            "block": "5000-DELETE-PORTFOLIO",
+            "code": "           IF NOT PORT-SUCCESS\n               MOVE 'Error deleting Portfolio' TO WS-ERROR-TEXT\n               PERFORM 9000-ERROR",
+            "supports_requirement": [
+              "REQ-046"
+            ]
+          }
+        ],
+        "rationale": "The delete paragraph executes a keyed delete and distinguishes not-found from generic delete failure before ending in the shared error routine."
+      }
+    },
+    {
+      "id": "REQ-047",
+      "requirement": "The system shall read portfolio deletion requests sequentially until end-of-file and then terminate cleanly.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTDEL.cbl",
+            "block": "0000-MAIN",
+            "role": "entry point"
+          },
+          {
+            "file": "PORTDEL.cbl",
+            "block": "1000-INITIALIZE",
+            "role": "setup"
+          },
+          {
+            "file": "PORTDEL.cbl",
+            "block": "2000-PROCESS",
+            "role": "sequential read"
+          },
+          {
+            "file": "PORTDEL.cbl",
+            "block": "3000-TERMINATE",
+            "role": "cleanup"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTDEL.cbl",
+            "block": "0000-MAIN",
+            "code": "       0000-MAIN.\n           PERFORM 1000-INITIALIZE\n           \n           PERFORM 2000-PROCESS\n              UNTIL END-OF-FILE\n           \n           PERFORM 3000-TERMINATE",
+            "supports_requirement": [
+              "REQ-047"
+            ]
+          },
+          {
+            "file": "PORTDEL.cbl",
+            "block": "2000-PROCESS",
+            "code": "       2000-PROCESS.\n           READ DELETE-FILE\n               AT END\n                   SET END-OF-FILE TO TRUE\n               NOT AT END\n                   PERFORM 2100-PROCESS-DELETE\n           END-READ",
+            "supports_requirement": [
+              "REQ-047"
+            ]
+          }
+        ],
+        "rationale": "The main loop continues until EOF, and the process paragraph sets the EOF switch when the input file is exhausted."
+      }
+    },
+    {
+      "id": "REQ-048",
+      "requirement": "The system shall delete matched portfolio records and update deleted, not-found, or error counts accordingly.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTDEL.cbl",
+            "block": "2100-PROCESS-DELETE",
+            "role": "lookup and route"
+          },
+          {
+            "file": "PORTDEL.cbl",
+            "block": "2200-DELETE-RECORD",
+            "role": "delete execution"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTDEL.cbl",
+            "block": "2100-PROCESS-DELETE",
+            "code": "       2100-PROCESS-DELETE.\n           MOVE DEL-KEY TO PORT-KEY\n           \n           READ PORTFOLIO-FILE\n           \n           EVALUATE TRUE\n               WHEN WS-SUCCESS-STATUS\n                   PERFORM 2200-DELETE-RECORD\n               WHEN WS-REC-NOT-FND\n                   ADD 1 TO WS-NOT-FND-COUNT\n                   DISPLAY 'Record not found: ' PORT-KEY",
+            "supports_requirement": [
+              "REQ-048"
+            ]
+          },
+          {
+            "file": "PORTDEL.cbl",
+            "block": "2200-DELETE-RECORD",
+            "code": "       2200-DELETE-RECORD.\n           DELETE PORTFOLIO-FILE\n           \n           EVALUATE TRUE\n               WHEN WS-SUCCESS-STATUS\n                   ADD 1 TO WS-DEL-COUNT\n               WHEN OTHER\n                   ADD 1 TO WS-ERROR-COUNT",
+            "supports_requirement": [
+              "REQ-048"
+            ]
+          }
+        ],
+        "rationale": "The delete processor first locates the target record and then increments the proper outcome counter after the DELETE attempt."
+      }
+    },
+    {
+      "id": "REQ-049",
+      "requirement": "The system shall display each portfolio record read from the file and count the records processed.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTREAD.cbl",
+            "block": "0000-MAIN",
+            "role": "entry point"
+          },
+          {
+            "file": "PORTREAD.cbl",
+            "block": "2000-PROCESS",
+            "role": "loop"
+          },
+          {
+            "file": "PORTREAD.cbl",
+            "block": "2100-DISPLAY-RECORD",
+            "role": "display step"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTREAD.cbl",
+            "block": "2100-DISPLAY-RECORD",
+            "code": "       2100-DISPLAY-RECORD.\n           DISPLAY 'Portfolio Record: ' WS-RECORD-COUNT\n           DISPLAY '  ID: ' PORT-ID\n           DISPLAY '  Account: ' PORT-ACCOUNT-NO\n           DISPLAY '  Client: ' PORT-CLIENT-NAME\n           DISPLAY '  Status: ' PORT-STATUS\n           DISPLAY '  Total Value: ' PORT-TOTAL-VALUE",
+            "supports_requirement": [
+              "REQ-049"
+            ]
+          }
+        ],
+        "rationale": "The display paragraph outputs the record fields after each successful read, while the main loop continues until EOF."
+      }
+    },
+    {
+      "id": "REQ-050",
+      "requirement": "The system shall validate input portfolio data before adding it, set maintenance dates, and write the new record.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTADD.cbl",
+            "block": "0000-MAIN",
+            "role": "entry point"
+          },
+          {
+            "file": "PORTADD.cbl",
+            "block": "2000-PROCESS",
+            "role": "input loop"
+          },
+          {
+            "file": "PORTADD.cbl",
+            "block": "2100-VALIDATE-AND-ADD",
+            "role": "validation and write"
+          },
+          {
+            "file": "PORTADD.cbl",
+            "block": "3000-TERMINATE",
+            "role": "cleanup"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTADD.cbl",
+            "block": "2100-VALIDATE-AND-ADD",
+            "code": "       2100-VALIDATE-AND-ADD.\n           IF PORT-ID EQUAL SPACES OR\n              PORT-CLIENT-NAME EQUAL SPACES OR\n              PORT-STATUS NOT EQUAL 'A'\n               ADD 1 TO WS-ERROR-COUNT\n               DISPLAY 'Invalid record data: ' PORT-ID\n               EXIT PARAGRAPH\n           END-IF",
+            "supports_requirement": [
+              "REQ-050"
+            ]
+          },
+          {
+            "file": "PORTADD.cbl",
+            "block": "2100-VALIDATE-AND-ADD",
+            "code": "           MOVE WS-CURRENT-DATE TO PORT-CREATE-DATE\n           MOVE WS-CURRENT-DATE TO PORT-LAST-MAINT\n           \n           WRITE PORT-RECORD",
+            "supports_requirement": [
+              "REQ-050"
+            ]
+          }
+        ],
+        "rationale": "The add path rejects incomplete or inactive records, stamps the create/maintenance dates, and then writes the record to the file."
+      }
+    },
+    {
+      "id": "REQ-051",
+      "requirement": "The system shall convert audit input fields into an audit trail record and write it to the audit file.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "AUDPROC.cbl",
+            "block": "0000-MAIN",
+            "role": "entry point"
+          },
+          {
+            "file": "AUDPROC.cbl",
+            "block": "2000-PROCESS-AUDIT",
+            "role": "build audit record"
+          },
+          {
+            "file": "AUDPROC.cbl",
+            "block": "3000-TERMINATE",
+            "role": "cleanup"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "AUDPROC.cbl",
+            "block": "2000-PROCESS-AUDIT",
+            "code": "       2000-PROCESS-AUDIT.\n           INITIALIZE AUDIT-RECORD\n           \n           MOVE WS-FORMATTED-TIME  TO AUD-TIMESTAMP\n           MOVE LS-SYSTEM-INFO     TO AUD-HEADER\n           MOVE LS-TYPE            TO AUD-TYPE\n           MOVE LS-ACTION          TO AUD-ACTION\n           MOVE LS-STATUS          TO AUD-STATUS",
+            "supports_requirement": [
+              "REQ-051"
+            ]
+          },
+          {
+            "file": "AUDPROC.cbl",
+            "block": "2000-PROCESS-AUDIT",
+            "code": "           WRITE AUDIT-RECORD\n           \n           IF WS-FILE-STATUS NOT = '00'\n               DISPLAY 'Error writing audit record: ' WS-FILE-STATUS\n               MOVE 8 TO LS-RETURN-CODE",
+            "supports_requirement": [
+              "REQ-051"
+            ]
+          }
+        ],
+        "rationale": "The audit processor assembles the record from the input linkage fields and writes it, returning an error code only when the file write fails."
+      }
+    },
+    {
+      "id": "REQ-052",
+      "requirement": "The system shall commit DB2 work on request and update the commit counter when the SQL COMMIT succeeds.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "DB2CMT.cbl",
+            "block": "0000-MAIN",
+            "role": "dispatch"
+          },
+          {
+            "file": "DB2CMT.cbl",
+            "block": "2000-COMMIT",
+            "role": "commit flow"
+          },
+          {
+            "file": "DB2CMT.cbl",
+            "block": "2100-ISSUE-COMMIT",
+            "role": "issue SQL COMMIT"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "DB2CMT.cbl",
+            "block": "2000-COMMIT",
+            "code": "       2000-COMMIT.\n           EXEC SQL\n               COMMIT WORK\n           END-EXEC\n           \n           IF SQLCODE = 0\n               ADD 1 TO WS-COMMIT-COUNT\n               MOVE 0 TO LS-RETURN-CODE\n           ELSE",
+            "supports_requirement": [
+              "REQ-052"
+            ]
+          },
+          {
+            "file": "DB2CMT.cbl",
+            "block": "2100-ISSUE-COMMIT",
+            "code": "       2100-ISSUE-COMMIT.\n           EXEC SQL\n                COMMIT WORK\n           END-EXEC\n           \n           IF SQLCODE = 0\n              ADD 1 TO WS-COMMIT-COUNT",
+            "supports_requirement": [
+              "REQ-052"
+            ]
+          }
+        ],
+        "rationale": "The commit path executes COMMIT WORK and increments the successful commit counter only when SQLCODE indicates success."
+      }
+    },
+    {
+      "id": "REQ-053",
+      "requirement": "The system shall roll back DB2 work when requested and report rollback failures through the shared logging path.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "DB2CMT.cbl",
+            "block": "3000-ROLLBACK",
+            "role": "rollback flow"
+          },
+          {
+            "file": "DB2CMT.cbl",
+            "block": "9100-LOG-ERROR",
+            "role": "error logging"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "DB2CMT.cbl",
+            "block": "3000-ROLLBACK",
+            "code": "       3000-ROLLBACK.\n           EXEC SQL\n               ROLLBACK WORK\n           END-EXEC\n           \n           IF SQLCODE = 0\n               ADD 1 TO WS-ROLLBACK-COUNT\n               MOVE 0 TO LS-RETURN-CODE\n           ELSE",
+            "supports_requirement": [
+              "REQ-053"
+            ]
+          },
+          {
+            "file": "DB2CMT.cbl",
+            "block": "3000-ROLLBACK",
+            "code": "               MOVE SQLCODE TO LS-SQLCODE\n               MOVE 'Rollback failed' TO LS-ERROR-MSG\n               MOVE 8 TO LS-RETURN-CODE\n               PERFORM 9100-LOG-ERROR",
+            "supports_requirement": [
+              "REQ-053"
+            ]
+          }
+        ],
+        "rationale": "The rollback paragraph issues ROLLBACK WORK and, on failure, captures SQLCODE and invokes the shared error log routine."
+      }
+    },
+    {
+      "id": "REQ-054",
+      "requirement": "The system shall create DB2 savepoints and record successful savepoint creation.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "DB2CMT.cbl",
+            "block": "4000-SAVEPOINT",
+            "role": "savepoint flow"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "DB2CMT.cbl",
+            "block": "4000-SAVEPOINT",
+            "code": "       4000-SAVEPOINT.\n           MOVE LS-SAVEPOINT-NAME TO WS-SAVEPOINT-ID\n           \n           EXEC SQL\n               SAVEPOINT :WS-SAVEPOINT-ID ON ROLLBACK RETAIN CURSORS\n           END-EXEC\n           \n           IF SQLCODE = 0\n               ADD 1 TO WS-SAVEPOINT-COUNT\n               MOVE 0 TO LS-RETURN-CODE",
+            "supports_requirement": [
+              "REQ-054"
+            ]
+          }
+        ],
+        "rationale": "The savepoint paragraph maps the requested name to a working field, executes SAVEPOINT, and increments the savepoint counter after success."
+      }
+    },
+    {
+      "id": "REQ-055",
+      "requirement": "The system shall build a DB2 error log row from the input SQL error context and insert it into ERRLOG.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "DB2ERR.cbl",
+            "block": "0000-MAIN",
+            "role": "dispatch"
+          },
+          {
+            "file": "DB2ERR.cbl",
+            "block": "1000-LOG-ERROR",
+            "role": "build row"
+          },
+          {
+            "file": "DB2ERR.cbl",
+            "block": "1200-INSERT-ERROR",
+            "role": "insert row"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "DB2ERR.cbl",
+            "block": "1000-LOG-ERROR",
+            "code": "       1000-LOG-ERROR.\n           INITIALIZE WS-ERRLOG-REC\n           \n           ACCEPT WS-CURRENT-TIMESTAMP FROM TIME STAMP\n           \n           MOVE WS-CURRENT-TIMESTAMP TO EL-ERROR-TIMESTAMP\n           MOVE LS-PROGRAM-ID       TO EL-PROGRAM-ID\n           MOVE 'D'                 TO EL-ERROR-TYPE",
+            "supports_requirement": [
+              "REQ-055"
+            ]
+          },
+          {
+            "file": "DB2ERR.cbl",
+            "block": "1200-INSERT-ERROR",
+            "code": "       1200-INSERT-ERROR.\n           EXEC SQL\n               INSERT INTO ERRLOG\n               VALUES (:WS-ERRLOG-REC)\n           END-EXEC\n           \n           IF SQLCODE = 0\n               MOVE 0 TO LS-RETURN-CODE",
+            "supports_requirement": [
+              "REQ-055"
+            ]
+          }
+        ],
+        "rationale": "The error logger populates the error record from the input context and persists it to the ERRLOG table when the insert succeeds."
+      }
+    },
+    {
+      "id": "REQ-056",
+      "requirement": "The system shall classify DB2 SQLCODE values into actionable recovery messages and return codes.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "DB2ERR.cbl",
+            "block": "2000-DIAGNOSE-ERROR",
+            "role": "SQLCODE classification"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "DB2ERR.cbl",
+            "block": "2000-DIAGNOSE-ERROR",
+            "code": "       2000-DIAGNOSE-ERROR.\n           EVALUATE LS-SQLCODE\n               WHEN WS-DEADLOCK\n                   MOVE 'Deadlock detected - retry transaction'\n                     TO LS-ERROR-TEXT\n                   MOVE 4 TO LS-RETURN-CODE\n               WHEN WS-TIMEOUT\n                   MOVE 'Timeout occurred - retry transaction'\n                     TO LS-ERROR-TEXT\n                   MOVE 4 TO LS-RETURN-CODE\n               WHEN WS-CONNECTION-ERROR\n                   MOVE 'DB2 connection error - check availability'\n                     TO LS-ERROR-TEXT\n                   MOVE 12 TO LS-RETURN-CODE",
+            "supports_requirement": [
+              "REQ-056"
+            ]
+          }
+        ],
+        "rationale": "The diagnose paragraph maps well-known SQLCODE values to retryable or severe outcomes and sets a matching textual instruction."
+      }
+    },
+    {
+      "id": "REQ-057",
+      "requirement": "The system shall retry DB2 connections up to a configured limit, classify connection errors, and disconnect cleanly when requested.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "DB2CONN.cbl",
+            "block": "0000-MAIN",
+            "role": "dispatch"
+          },
+          {
+            "file": "DB2CONN.cbl",
+            "block": "1000-CONNECT",
+            "role": "connect with retries"
+          },
+          {
+            "file": "DB2CONN.cbl",
+            "block": "1100-HANDLE-CONN-ERROR",
+            "role": "error classification"
+          },
+          {
+            "file": "DB2CONN.cbl",
+            "block": "2000-DISCONNECT",
+            "role": "disconnect"
+          },
+          {
+            "file": "DB2CONN.cbl",
+            "block": "3000-CHECK-STATUS",
+            "role": "status check"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "DB2CONN.cbl",
+            "block": "1000-CONNECT",
+            "code": "       1000-CONNECT.\n           SET WS-DISCONNECTED TO TRUE\n           MOVE ZERO TO WS-RETRY-COUNT\n           MOVE LS-DB-NAME TO WS-DB-NAME\n           MOVE LS-PLAN-NAME TO WS-PLAN-NAME\n           \n           PERFORM UNTIL WS-CONNECTED\n                      OR WS-RETRY-COUNT >= WS-MAX-RETRIES\n               \n               EXEC SQL\n                   CONNECT TO :WS-DB-NAME\n               END-EXEC",
+            "supports_requirement": [
+              "REQ-057"
+            ]
+          },
+          {
+            "file": "DB2CONN.cbl",
+            "block": "1100-HANDLE-CONN-ERROR",
+            "code": "       1100-HANDLE-CONN-ERROR.\n           MOVE SQLCODE TO LS-SQLCODE\n           \n           EVALUATE SQLCODE\n               WHEN -30081\n                   MOVE 'Maximum connections exceeded' \n                     TO LS-ERROR-MSG\n               WHEN -99999\n                   MOVE 'Network error connecting to DB2' \n                     TO LS-ERROR-MSG",
+            "supports_requirement": [
+              "REQ-057"
+            ]
+          },
+          {
+            "file": "DB2CONN.cbl",
+            "block": "2000-DISCONNECT",
+            "code": "       2000-DISCONNECT.\n           IF WS-CONNECTED\n               EXEC SQL\n                   COMMIT WORK\n               END-EXEC\n               \n               EXEC SQL\n                   CONNECT RESET\n               END-EXEC",
+            "supports_requirement": [
+              "REQ-057"
+            ]
+          },
+          {
+            "file": "DB2CONN.cbl",
+            "block": "3000-CHECK-STATUS",
+            "code": "       3000-CHECK-STATUS.\n           EXEC SQL\n               SELECT CURRENT SERVER\n               INTO :WS-DB-NAME\n               FROM SYSIBM.SYSDUMMY1\n           END-EXEC\n           \n           IF SQLCODE = 0",
+            "supports_requirement": [
+              "REQ-057"
+            ]
+          }
+        ],
+        "rationale": "The program retries connect attempts, translates specific SQLCODE failures into messages, resets the connection on disconnect, and validates active status through a SQL probe."
+      }
+    },
+    {
+      "id": "REQ-058",
+      "requirement": "The system shall read batch control records, evaluate prerequisites, and update control status when prerequisites are satisfied.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "BCHCTL00.cbl",
+            "block": "0000-MAIN",
+            "role": "dispatch"
+          },
+          {
+            "file": "BCHCTL00.cbl",
+            "block": "1000-PROCESS-INITIALIZE",
+            "role": "initialize"
+          },
+          {
+            "file": "BCHCTL00.cbl",
+            "block": "2000-CHECK-PREREQUISITES",
+            "role": "check prerequisites"
+          },
+          {
+            "file": "BCHCTL00.cbl",
+            "block": "3000-UPDATE-STATUS",
+            "role": "status update"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "BCHCTL00.cbl",
+            "block": "2000-CHECK-PREREQUISITES",
+            "code": "       2000-CHECK-PREREQUISITES.\n           PERFORM 2100-READ-CONTROL-RECORD\n           PERFORM 2200-CHECK-DEPENDENCIES\n           IF PREREQS-SATISFIED\n               MOVE BCT-RC-SUCCESS TO LS-RETURN-CODE\n           ELSE\n               MOVE BCT-RC-WARNING TO LS-RETURN-CODE\n           END-IF",
+            "supports_requirement": [
+              "REQ-058"
+            ]
+          },
+          {
+            "file": "BCHCTL00.cbl",
+            "block": "3000-UPDATE-STATUS",
+            "code": "       3000-UPDATE-STATUS.\n           PERFORM 3100-READ-CONTROL-RECORD\n           PERFORM 3200-UPDATE-PROCESS-STATUS\n           PERFORM 3300-WRITE-CONTROL-RECORD",
+            "supports_requirement": [
+              "REQ-058"
+            ]
+          }
+        ],
+        "rationale": "The batch control flow reads prerequisite data, checks dependency satisfaction, and then writes the updated process status back to the control file."
+      }
+    },
+    {
+      "id": "REQ-059",
+      "requirement": "The system shall finalize batch processing by updating completion information and closing control files.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "BCHCTL00.cbl",
+            "block": "4000-PROCESS-TERMINATE",
+            "role": "finalization"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "BCHCTL00.cbl",
+            "block": "4000-PROCESS-TERMINATE",
+            "code": "       4000-PROCESS-TERMINATE.\n           PERFORM 4100-UPDATE-COMPLETION\n           PERFORM 4200-CLOSE-FILES\n           .\n           \n       9000-ERROR-ROUTINE.\n           MOVE 'BCHCTL00' TO ERR-PROGRAM\n           MOVE BCT-RC-ERROR TO LS-RETURN-CODE",
+            "supports_requirement": [
+              "REQ-059"
+            ]
+          }
+        ],
+        "rationale": "The terminate path updates completion state and closes the batch-control files, while the shared error routine binds the program name and error return code."
+      }
+    },
+    {
+      "id": "REQ-060",
+      "requirement": "The system shall define checkpoint/restart procedures for initialization, checkpoint taking, commit, and restart handling.",
+      "ground_truth": {
+        "status": "PARTIALLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "CKPRST.cbl",
+            "block": "PROC-INIT",
+            "role": "checkpoint init"
+          },
+          {
+            "file": "CKPRST.cbl",
+            "block": "PROC-TAKE-CHECKPOINT",
+            "role": "checkpoint take"
+          },
+          {
+            "file": "CKPRST.cbl",
+            "block": "PROC-COMMIT-CHECKPOINT",
+            "role": "checkpoint commit"
+          },
+          {
+            "file": "CKPRST.cbl",
+            "block": "PROC-RESTART",
+            "role": "restart"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "CKPRST.cbl",
+            "block": "PROC-INIT",
+            "code": "       PROC-INIT.\n           * Initialize checkpoint area\n           .\n       \n       PROC-TAKE-CHECKPOINT.\n           * Take a checkpoint\n           .\n       \n       PROC-COMMIT-CHECKPOINT.\n           * Commit checkpoint\n           .",
+            "supports_requirement": [
+              "REQ-060"
+            ]
+          }
+        ],
+        "rationale": "The file defines the checkpoint and restart procedure names, but the bodies are comments/placeholders rather than executable checkpoint logic."
+      }
+    },
+    {
+      "id": "REQ-061",
+      "requirement": "The system shall read history records, transform them into POSHIST rows, and insert them into DB2.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "HISTLD00.cbl",
+            "block": "0000-MAIN",
+            "role": "entry point"
+          },
+          {
+            "file": "HISTLD00.cbl",
+            "block": "1200-CONNECT-DB2",
+            "role": "DB2 connect"
+          },
+          {
+            "file": "HISTLD00.cbl",
+            "block": "1300-INIT-CHECKPOINTS",
+            "role": "control setup"
+          },
+          {
+            "file": "HISTLD00.cbl",
+            "block": "2100-READ-HISTORY",
+            "role": "sequential read"
+          },
+          {
+            "file": "HISTLD00.cbl",
+            "block": "2200-LOAD-TO-DB2",
+            "role": "DB2 insert"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "HISTLD00.cbl",
+            "block": "2100-READ-HISTORY",
+            "code": "       2100-READ-HISTORY.\n           READ TRANSACTION-HISTORY\n               AT END\n                   SET END-OF-FILE TO TRUE\n               NOT AT END\n                   ADD 1 TO WS-RECORDS-READ\n           END-READ",
+            "supports_requirement": [
+              "REQ-061"
+            ]
+          },
+          {
+            "file": "HISTLD00.cbl",
+            "block": "2200-LOAD-TO-DB2",
+            "code": "       2200-LOAD-TO-DB2.\n           INITIALIZE POSHIST-RECORD\n           \n           MOVE TH-ACCOUNT-NO    TO PH-ACCOUNT-NO\n           MOVE TH-PORTFOLIO-ID  TO PH-PORTFOLIO-ID\n           MOVE TH-TRANS-DATE    TO PH-TRANS-DATE\n           MOVE TH-TRANS-TIME    TO PH-TRANS-TIME\n           MOVE TH-TRANS-TYPE    TO PH-TRANS-TYPE\n           MOVE TH-SECURITY-ID   TO PH-SECURITY-ID\n           \n           EXEC SQL\n               INSERT INTO POSHIST\n               VALUES (:POSHIST-RECORD)\n           END-EXEC",
+            "supports_requirement": [
+              "REQ-061"
+            ]
+          }
+        ],
+        "rationale": "The loader reads sequential history input, maps each input field into the POSHIST DB2 record layout, and inserts the transformed row."
+      }
+    },
+    {
+      "id": "REQ-062",
+      "requirement": "The system shall commit history-load work after the configured threshold and refresh checkpoint information.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "HISTLD00.cbl",
+            "block": "2300-CHECK-COMMIT",
+            "role": "commit threshold"
+          },
+          {
+            "file": "HISTLD00.cbl",
+            "block": "2310-UPDATE-CHECKPOINT",
+            "role": "checkpoint refresh"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "HISTLD00.cbl",
+            "block": "2300-CHECK-COMMIT",
+            "code": "       2300-CHECK-COMMIT.\n           ADD 1 TO WS-COMMIT-COUNT\n           \n           IF WS-COMMIT-COUNT >= WS-COMMIT-THRESHOLD\n               EXEC SQL\n                   COMMIT WORK\n               END-EXEC\n               \n               MOVE 0 TO WS-COMMIT-COUNT\n               \n               PERFORM 2310-UPDATE-CHECKPOINT",
+            "supports_requirement": [
+              "REQ-062"
+            ]
+          }
+        ],
+        "rationale": "The commit logic increments a counter, issues COMMIT WORK when the threshold is reached, and then refreshes the checkpoint state."
+      }
+    },
+    {
+      "id": "REQ-063",
+      "requirement": "The system shall select the next ready process, check its dependencies, and activate its control record.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PRCSEQ00.cbl",
+            "block": "0000-MAIN",
+            "role": "dispatch"
+          },
+          {
+            "file": "PRCSEQ00.cbl",
+            "block": "1000-INITIALIZE-SEQUENCE",
+            "role": "initialize"
+          },
+          {
+            "file": "PRCSEQ00.cbl",
+            "block": "2000-GET-NEXT-PROCESS",
+            "role": "select next"
+          },
+          {
+            "file": "PRCSEQ00.cbl",
+            "block": "2200-CHECK-DEPENDENCIES",
+            "role": "dependency validation"
+          },
+          {
+            "file": "PRCSEQ00.cbl",
+            "block": "2300-UPDATE-PROCESS-STATUS",
+            "role": "activate process"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PRCSEQ00.cbl",
+            "block": "2100-FIND-NEXT-READY",
+            "code": "       2100-FIND-NEXT-READY.\n           PERFORM VARYING WS-SEQUENCE-IX FROM 1 BY 1\n                   UNTIL WS-SEQUENCE-IX > WS-PROCESS-COUNT\n               IF WS-PROC-STATUS(WS-SEQUENCE-IX) = BCT-STAT-READY\n                   MOVE WS-PROC-ID(WS-SEQUENCE-IX) \n                     TO LS-NEXT-PROCESS\n                   EXIT PERFORM\n               END-IF\n           END-PERFORM",
+            "supports_requirement": [
+              "REQ-063"
+            ]
+          },
+          {
+            "file": "PRCSEQ00.cbl",
+            "block": "2200-CHECK-DEPENDENCIES",
+            "code": "       2200-CHECK-DEPENDENCIES.\n           MOVE LS-NEXT-PROCESS TO PSR-PROCESS-ID\n           \n           READ PROCESS-SEQ-FILE\n               INVALID KEY\n                   MOVE 'Process definition not found' TO ERR-TEXT\n                   PERFORM 9000-ERROR-ROUTINE\n           END-READ",
+            "supports_requirement": [
+              "REQ-063"
+            ]
+          },
+          {
+            "file": "PRCSEQ00.cbl",
+            "block": "2300-UPDATE-PROCESS-STATUS",
+            "code": "       2300-UPDATE-PROCESS-STATUS.\n           MOVE LS-NEXT-PROCESS TO BCT-JOB-NAME\n           MOVE LS-PROCESS-DATE TO BCT-PROCESS-DATE\n           \n           READ BATCH-CONTROL-FILE\n               INVALID KEY\n                   MOVE 'Process record not found' TO ERR-TEXT\n                   PERFORM 9000-ERROR-ROUTINE",
+            "supports_requirement": [
+              "REQ-063"
+            ]
+          }
+        ],
+        "rationale": "The sequence manager scans for the first READY entry, verifies dependency records, and then updates the batch-control row to ACTIVE."
+      }
+    },
+    {
+      "id": "REQ-064",
+      "requirement": "The system shall open the process-sequence and batch-control files during sequence initialization.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PRCSEQ00.cbl",
+            "block": "1100-OPEN-FILES",
+            "role": "open files"
+          },
+          {
+            "file": "PRCSEQ00.cbl",
+            "block": "1200-BUILD-SEQUENCE",
+            "role": "build sequence data"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PRCSEQ00.cbl",
+            "block": "1100-OPEN-FILES",
+            "code": "       1100-OPEN-FILES.\n           OPEN INPUT PROCESS-SEQ-FILE\n           OPEN I-O   BATCH-CONTROL-FILE\n           \n           IF FILE-STATUS-NOT-OK\n               MOVE 'Error opening sequence files' TO ERR-TEXT\n               PERFORM 9000-ERROR-ROUTINE",
+            "supports_requirement": [
+              "REQ-064"
+            ]
+          },
+          {
+            "file": "PRCSEQ00.cbl",
+            "block": "1200-BUILD-SEQUENCE",
+            "code": "       1200-BUILD-SEQUENCE.\n           MOVE SPACES TO WS-PROCESS-COUNT\n           \n           READ PROCESS-SEQ-FILE\n               AT END\n                   SET SEQ-EOF TO TRUE\n           END-READ",
+            "supports_requirement": [
+              "REQ-064"
+            ]
+          }
+        ],
+        "rationale": "Initialization explicitly opens the sequence and control files before sequence data is loaded or processed."
+      }
+    },
+    {
+      "id": "REQ-065",
+      "requirement": "The system shall generate a return-code analysis report grouped by program ID.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "RTNANA00.cbl",
+            "block": "P100-INIT-PROGRAM",
+            "role": "init"
+          },
+          {
+            "file": "RTNANA00.cbl",
+            "block": "P200-PROCESS-ANALYSIS",
+            "role": "analysis"
+          },
+          {
+            "file": "RTNANA00.cbl",
+            "block": "P210-WRITE-HEADERS",
+            "role": "report headers"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "RTNANA00.cbl",
+            "block": "P200-PROCESS-ANALYSIS",
+            "code": "       P200-PROCESS-ANALYSIS.\n           EXEC SQL\n                DECLARE PRGCUR CURSOR FOR\n                SELECT PROGRAM_ID,\n                       COUNT(*) AS TOTAL,\n                       COUNT(CASE WHEN STATUS_CODE = 'S' THEN 1 END),\n                       COUNT(CASE WHEN STATUS_CODE = 'W' THEN 1 END),\n                       COUNT(CASE WHEN STATUS_CODE = 'E' THEN 1 END),\n                       COUNT(CASE WHEN STATUS_CODE = 'F' THEN 1 END)\n                FROM RTNCODES\n                GROUP BY PROGRAM_ID",
+            "supports_requirement": [
+              "REQ-065"
+            ]
+          }
+        ],
+        "rationale": "The analysis routine queries RTNCODES grouped by program and opens a cursor for reporting those aggregate return-code counts."
+      }
+    },
+    {
+      "id": "REQ-066",
+      "requirement": "The system shall maintain the current and highest return code, classify the severity band, and support retrieval of those values.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "RTNCDE00.cbl",
+            "block": "P200-SET-RETURN-CODE",
+            "role": "set code"
+          },
+          {
+            "file": "RTNCDE00.cbl",
+            "block": "P300-GET-RETURN-CODE",
+            "role": "retrieve code"
+          },
+          {
+            "file": "RTNCDE00.cbl",
+            "block": "P400-LOG-RETURN-CODE",
+            "role": "persist code"
+          },
+          {
+            "file": "RTNCDE00.cbl",
+            "block": "P500-ANALYZE-CODES",
+            "role": "analytics"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "RTNCDE00.cbl",
+            "block": "P200-SET-RETURN-CODE",
+            "code": "       P200-SET-RETURN-CODE.\n           IF RC-NEW-CODE > RC-HIGHEST-CODE\n              MOVE RC-NEW-CODE TO RC-HIGHEST-CODE\n           END-IF.\n           \n           MOVE RC-NEW-CODE TO RC-CURRENT-CODE.\n           \n           EVALUATE RC-NEW-CODE\n               WHEN 0\n                    SET RC-STATUS-SUCCESS TO TRUE",
+            "supports_requirement": [
+              "REQ-066"
+            ]
+          },
+          {
+            "file": "RTNCDE00.cbl",
+            "block": "P300-GET-RETURN-CODE",
+            "code": "       P300-GET-RETURN-CODE.\n           MOVE RC-CURRENT-CODE TO RC-RETURN-VALUE.\n           MOVE RC-HIGHEST-CODE TO RC-HIGHEST-RETURN.\n           MOVE RC-STATUS TO RC-RETURN-STATUS.\n           MOVE 0 TO RC-RESPONSE-CODE.",
+            "supports_requirement": [
+              "REQ-066"
+            ]
+          },
+          {
+            "file": "RTNCDE00.cbl",
+            "block": "P400-LOG-RETURN-CODE",
+            "code": "       P400-LOG-RETURN-CODE.\n           MOVE FUNCTION CURRENT-DATE TO WS-CURRENT-TIME.\n           \n           EXEC SQL\n                INSERT INTO RTNCODES\n                (TIMESTAMP,\n                 PROGRAM_ID,\n                 RETURN_CODE,\n                 HIGHEST_CODE,\n                 STATUS_CODE,\n                 MESSAGE_TEXT)\n                VALUES",
+            "supports_requirement": [
+              "REQ-066"
+            ]
+          }
+        ],
+        "rationale": "The return-code manager updates the current/highest code, exposes them through a retrieval API, and writes them to the RTNCODES table."
+      }
+    },
+    {
+      "id": "REQ-067",
+      "requirement": "The system shall analyze return-code history over a date range and produce summary counts for the selected program.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "RTNCDE00.cbl",
+            "block": "P500-ANALYZE-CODES",
+            "role": "analysis"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "RTNCDE00.cbl",
+            "block": "P500-ANALYZE-CODES",
+            "code": "       P500-ANALYZE-CODES.\n           EXEC SQL\n                SELECT COUNT(*),\n                       MAX(RETURN_CODE),\n                       MIN(RETURN_CODE)\n                INTO :RC-TOTAL-CODES,\n                     :RC-MAX-CODE,\n                     :RC-MIN-CODE\n                FROM RTNCODES\n                WHERE PROGRAM_ID = :RC-PROGRAM-ID\n                  AND TIMESTAMP >= :RC-START-TIME\n                  AND TIMESTAMP <= :RC-END-TIME",
+            "supports_requirement": [
+              "REQ-067"
+            ]
+          }
+        ],
+        "rationale": "The analysis routine aggregates return-code records for one program between the requested start and end timestamps."
+      }
+    },
+    {
+      "id": "REQ-068",
+      "requirement": "The system shall write report headers and then process positions, transactions, and summary output in the position report.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "RPTPOS00.cbl",
+            "block": "0000-MAIN",
+            "role": "entry"
+          },
+          {
+            "file": "RPTPOS00.cbl",
+            "block": "1100-OPEN-FILES",
+            "role": "open files"
+          },
+          {
+            "file": "RPTPOS00.cbl",
+            "block": "1200-WRITE-HEADERS",
+            "role": "headers"
+          },
+          {
+            "file": "RPTPOS00.cbl",
+            "block": "2000-PROCESS-REPORT",
+            "role": "main report"
+          },
+          {
+            "file": "RPTPOS00.cbl",
+            "block": "2300-WRITE-SUMMARY",
+            "role": "summary"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "RPTPOS00.cbl",
+            "block": "1200-WRITE-HEADERS",
+            "code": "       1200-WRITE-HEADERS.\n           ACCEPT WS-REPORT-DATE FROM DATE\n           WRITE REPORT-RECORD FROM WS-HEADER1\n           WRITE REPORT-RECORD FROM WS-HEADER2\n           WRITE REPORT-RECORD FROM WS-HEADER3.",
+            "supports_requirement": [
+              "REQ-068"
+            ]
+          },
+          {
+            "file": "RPTPOS00.cbl",
+            "block": "2000-PROCESS-REPORT",
+            "code": "       2000-PROCESS-REPORT.\n           PERFORM 2100-READ-POSITIONS\n           PERFORM 2200-PROCESS-TRANSACTIONS\n           PERFORM 2300-WRITE-SUMMARY.",
+            "supports_requirement": [
+              "REQ-068"
+            ]
+          }
+        ],
+        "rationale": "The report program emits header lines first and then runs the position, transaction, and summary phases in order."
+      }
+    },
+    {
+      "id": "REQ-069",
+      "requirement": "The system shall accumulate DB2 and batch statistics from their respective input files for the status report.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "RPTSTA00.cbl",
+            "block": "0000-MAIN",
+            "role": "entry"
+          },
+          {
+            "file": "RPTSTA00.cbl",
+            "block": "2100-PROCESS-DB2-STATS",
+            "role": "DB2 stats"
+          },
+          {
+            "file": "RPTSTA00.cbl",
+            "block": "2200-PROCESS-BATCH-STATS",
+            "role": "batch stats"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "RPTSTA00.cbl",
+            "block": "2100-PROCESS-DB2-STATS",
+            "code": "       2100-PROCESS-DB2-STATS.\n           READ DB2-STATS\n               AT END SET END-OF-DB2-STATS TO TRUE\n           END-READ\n           \n           PERFORM UNTIL END-OF-DB2-STATS",
+            "supports_requirement": [
+              "REQ-069"
+            ]
+          },
+          {
+            "file": "RPTSTA00.cbl",
+            "block": "2200-PROCESS-BATCH-STATS",
+            "code": "       2200-PROCESS-BATCH-STATS.\n           READ BATCH-STATS\n               AT END SET END-OF-BATCH-STATS TO TRUE\n           END-READ\n           \n           PERFORM UNTIL END-OF-BATCH-STATS",
+            "supports_requirement": [
+              "REQ-069"
+            ]
+          }
+        ],
+        "rationale": "The status report reads DB2 stats and batch stats separately, iterating each file until EOF so it can accumulate their totals."
+      }
+    },
+    {
+      "id": "REQ-070",
+      "requirement": "The system shall summarize audit-trail and error-log information into the audit status report.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "RPTAUD00.cbl",
+            "block": "0000-MAIN",
+            "role": "entry"
+          },
+          {
+            "file": "RPTAUD00.cbl",
+            "block": "2100-PROCESS-AUDIT-TRAIL",
+            "role": "audit trail"
+          },
+          {
+            "file": "RPTAUD00.cbl",
+            "block": "2200-PROCESS-ERROR-LOG",
+            "role": "error log"
+          },
+          {
+            "file": "RPTAUD00.cbl",
+            "block": "2300-WRITE-SUMMARY",
+            "role": "summary"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "RPTAUD00.cbl",
+            "block": "2100-PROCESS-AUDIT-TRAIL",
+            "code": "       2100-PROCESS-AUDIT-TRAIL.\n           PERFORM 2110-READ-AUDIT-RECORDS\n           PERFORM 2120-SUMMARIZE-AUDIT.",
+            "supports_requirement": [
+              "REQ-070"
+            ]
+          },
+          {
+            "file": "RPTAUD00.cbl",
+            "block": "2200-PROCESS-ERROR-LOG",
+            "code": "       2200-PROCESS-ERROR-LOG.\n           PERFORM 2210-READ-ERROR-RECORDS\n           PERFORM 2220-SUMMARIZE-ERRORS.",
+            "supports_requirement": [
+              "REQ-070"
+            ]
+          }
+        ],
+        "rationale": "The audit report performs separate passes over audit records and error records before producing a final summary."
+      }
+    },
+    {
+      "id": "REQ-071",
+      "requirement": "The system shall validate the online user and determine authorization before allowing inquiry processing.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "INQONLN.cbl",
+            "block": "P100-PROCESS-REQUEST",
+            "role": "request routing"
+          },
+          {
+            "file": "INQONLN.cbl",
+            "block": "P050-SECURITY-CHECK",
+            "role": "security check"
+          },
+          {
+            "file": "SECMGR.cbl",
+            "block": "P100-VALIDATE-USER",
+            "role": "user validation"
+          },
+          {
+            "file": "SECMGR.cbl",
+            "block": "P200-CHECK-AUTH",
+            "role": "authorization check"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "INQONLN.cbl",
+            "block": "P050-SECURITY-CHECK",
+            "code": "       P050-SECURITY-CHECK.\n           MOVE 'V' TO SEC-REQUEST-TYPE.\n           \n           EXEC CICS ASSIGN\n                     USERID(SEC-USER-ID)",
+            "supports_requirement": [
+              "REQ-071"
+            ]
+          },
+          {
+            "file": "SECMGR.cbl",
+            "block": "P100-VALIDATE-USER",
+            "code": "       P100-VALIDATE-USER.\n           EXEC CICS ASSIGN\n                     USERID(WS-USER-ID)\n                     RESP(SEC-RESPONSE-CODE)\n           END-EXEC.\n           \n           IF SEC-RESPONSE-CODE = DFHRESP(NORMAL)\n              IF SEC-USER-ID = WS-USER-ID",
+            "supports_requirement": [
+              "REQ-071"
+            ]
+          },
+          {
+            "file": "SECMGR.cbl",
+            "block": "P200-CHECK-AUTH",
+            "code": "       P200-CHECK-AUTH.\n           EXEC SQL\n                SELECT COUNT(*)\n                INTO :WS-DB2-AREA\n                FROM AUTHFILE\n                WHERE USER_ID = :SEC-USER-ID\n                  AND RESOURCE = :SEC-RESOURCE-NAME",
+            "supports_requirement": [
+              "REQ-071"
+            ]
+          }
+        ],
+        "rationale": "The inquiry flow first obtains and verifies the signed-on user and then checks the authorization table before proceeding to business inquiry logic."
+      }
+    },
+    {
+      "id": "REQ-072",
+      "requirement": "The system shall route online inquiry requests to either portfolio inquiry or history inquiry processing after the request is received.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "INQONLN.cbl",
+            "block": "P100-PROCESS-REQUEST",
+            "role": "request router"
+          },
+          {
+            "file": "INQONLN.cbl",
+            "block": "P200-DISPLAY-MENU",
+            "role": "menu"
+          },
+          {
+            "file": "INQONLN.cbl",
+            "block": "P300-PORTFOLIO-INQUIRY",
+            "role": "portfolio path"
+          },
+          {
+            "file": "INQONLN.cbl",
+            "block": "P400-HISTORY-INQUIRY",
+            "role": "history path"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "INQONLN.cbl",
+            "block": "P100-PROCESS-REQUEST",
+            "code": "       P100-PROCESS-REQUEST.\n           MOVE LOW-VALUES TO WS-COMMAREA.\n           \n           EXEC CICS RECEIVE MAP('INQMAP')\n                     MAPSET('INQSET')\n                     INTO(WS-COMMAREA)\n                     RESP(WS-RESPONSE-CODE)\n           END-EXEC.\n           \n           EVALUATE WS-COMMAREA-FUNCTION\n               WHEN 'MENU'\n                    PERFORM P200-DISPLAY-MENU",
+            "supports_requirement": [
+              "REQ-072"
+            ]
+          },
+          {
+            "file": "INQONLN.cbl",
+            "block": "P400-HISTORY-INQUIRY",
+            "code": "       P400-HISTORY-INQUIRY.\n           EXEC CICS LINK PROGRAM('INQHIST')\n                     COMMAREA(WS-COMMAREA)\n                     LENGTH(LENGTH OF WS-COMMAREA)\n                     RESP(WS-RESPONSE-CODE)",
+            "supports_requirement": [
+              "REQ-072"
+            ]
+          }
+        ],
+        "rationale": "The online inquiry transaction receives the map input, branches by function code, and links to the appropriate portfolio or history transaction."
+      }
+    },
+    {
+      "id": "REQ-073",
+      "requirement": "The system shall read a portfolio position by account number and format the data for display when the record exists.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "INQPORT.cbl",
+            "block": "P200-GET-POSITION",
+            "role": "retrieve position"
+          },
+          {
+            "file": "INQPORT.cbl",
+            "block": "P300-FORMAT-DISPLAY",
+            "role": "format output"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "INQPORT.cbl",
+            "block": "P200-GET-POSITION",
+            "code": "       P200-GET-POSITION.\n           MOVE WS-COMMAREA-ACCOUNT-NO \n             TO POSITION-ACCOUNT OF WS-POSITION-RECORD.\n             \n           EXEC CICS READ FILE('POSFILE')\n                     INTO(WS-POSITION-RECORD)\n                     RIDFLD(POSITION-ACCOUNT OF WS-POSITION-RECORD)\n                     RESP(WS-RESPONSE-CODE)\n           END-EXEC.",
+            "supports_requirement": [
+              "REQ-073"
+            ]
+          },
+          {
+            "file": "INQPORT.cbl",
+            "block": "P300-FORMAT-DISPLAY",
+            "code": "       P300-FORMAT-DISPLAY.\n           EXEC CICS SEND MAP('POSMAP')\n                     MAPSET('INQSET')\n                     FROM(WS-POSITION-RECORD)\n                     ERASE\n                     RESP(WS-RESPONSE-CODE)",
+            "supports_requirement": [
+              "REQ-073"
+            ]
+          }
+        ],
+        "rationale": "The inquiry program uses the account number as a VSAM key, reads the position record, and sends the retrieved data to the display map."
+      }
+    },
+    {
+      "id": "REQ-074",
+      "requirement": "The system shall build a dynamic DB2 history query and pass it to the cursor manager for execution.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "INQHIST.cbl",
+            "block": "P150-DB2-CONNECT",
+            "role": "DB2 connect"
+          },
+          {
+            "file": "INQHIST.cbl",
+            "block": "P200-GET-HISTORY",
+            "role": "build query"
+          },
+          {
+            "file": "CURSMGR.cbl",
+            "block": "P100-DECLARE-CURSOR",
+            "role": "declare cursor"
+          },
+          {
+            "file": "CURSMGR.cbl",
+            "block": "P200-OPEN-CURSOR",
+            "role": "open cursor"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "INQHIST.cbl",
+            "block": "P200-GET-HISTORY",
+            "code": "       P200-GET-HISTORY.\n           MOVE 'SELECT TRANS_DATE, TRANS_TYPE, TRANS_UNITS, ' &\n                'TRANS_PRICE, TRANS_AMOUNT ' &\n                'FROM POSHIST ' &\n                'WHERE ACCOUNT_NO = ? ' &\n                'ORDER BY TRANS_DATE DESC' \n             TO CURS-STMT.\n             \n           MOVE 'D' TO CURS-REQUEST-TYPE.\n           EXEC CICS LINK PROGRAM('CURSMGR')",
+            "supports_requirement": [
+              "REQ-074"
+            ]
+          },
+          {
+            "file": "CURSMGR.cbl",
+            "block": "P100-DECLARE-CURSOR",
+            "code": "       P100-DECLARE-CURSOR.\n           MOVE 0 TO CURS-RESPONSE-CODE.\n           \n           IF USE-ARRAY-FETCH\n              MOVE WS-MAX-ROWS TO WS-ARRAY-SIZE\n           ELSE\n              MOVE 1 TO WS-ARRAY-SIZE\n           END-IF.\n           \n           EXEC SQL DECLARE :CURS-NAME CURSOR FOR\n                :CURS-STMT",
+            "supports_requirement": [
+              "REQ-074"
+            ]
+          },
+          {
+            "file": "CURSMGR.cbl",
+            "block": "P200-OPEN-CURSOR",
+            "code": "       P200-OPEN-CURSOR.\n           MOVE 0 TO WS-FETCH-COUNT.\n           MOVE 0 TO WS-ROWS-FETCHED.\n           \n           EXEC SQL OPEN :CURS-NAME END-EXEC.",
+            "supports_requirement": [
+              "REQ-074"
+            ]
+          }
+        ],
+        "rationale": "The history inquiry builds the SQL text, hands it to the shared cursor manager, and the cursor manager declares and opens the SQL cursor."
+      }
+    },
+    {
+      "id": "REQ-075",
+      "requirement": "The system shall generate DB2 connection tokens and prevent more than the configured number of active connections.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "DB2ONLN.cbl",
+            "block": "P100-PROCESS-CONNECT",
+            "role": "connection gate"
+          },
+          {
+            "file": "DB2ONLN.cbl",
+            "block": "P110-ESTABLISH-CONNECTION",
+            "role": "DB2 connect"
+          },
+          {
+            "file": "DB2ONLN.cbl",
+            "block": "P120-GENERATE-TOKEN",
+            "role": "token generation"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "DB2ONLN.cbl",
+            "block": "P100-PROCESS-CONNECT",
+            "code": "       P100-PROCESS-CONNECT.\n           IF WS-ACTIVE-CONNECTIONS < WS-MAX-CONNECTIONS\n              PERFORM P110-ESTABLISH-CONNECTION\n                 THRU P110-EXIT\n           ELSE\n              MOVE 'Maximum connections reached' \n                TO DB2-ERROR-MSG\n              MOVE -1 TO DB2-RESPONSE-CODE",
+            "supports_requirement": [
+              "REQ-075"
+            ]
+          },
+          {
+            "file": "DB2ONLN.cbl",
+            "block": "P120-GENERATE-TOKEN",
+            "code": "       P120-GENERATE-TOKEN.\n           MOVE FUNCTION CURRENT-DATE TO DB2-CONNECTION-TOKEN.\n           STRING DB2-CONNECTION-TOKEN DELIMITED BY SIZE\n                  WS-ACTIVE-CONNECTIONS DELIMITED BY SIZE\n                  INTO DB2-CONNECTION-TOKEN.",
+            "supports_requirement": [
+              "REQ-075"
+            ]
+          }
+        ],
+        "rationale": "The online DB2 manager blocks connection requests above the configured limit and constructs a connection token from the current date and active-count state."
+      }
+    },
+    {
+      "id": "REQ-076",
+      "requirement": "The system shall recover DB2 connectivity by retrying reconnect attempts with a wait interval and escalating on failure.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "DB2RECV.cbl",
+            "block": "P100-RECOVER-CONNECTION",
+            "role": "recovery loop"
+          },
+          {
+            "file": "DB2RECV.cbl",
+            "block": "P110-ATTEMPT-RECONNECT",
+            "role": "reconnect"
+          },
+          {
+            "file": "DB2RECV.cbl",
+            "block": "P120-WAIT-INTERVAL",
+            "role": "delay"
+          },
+          {
+            "file": "DB2RECV.cbl",
+            "block": "P200-RECOVER-TRANSACTION",
+            "role": "transaction recovery"
+          },
+          {
+            "file": "DB2RECV.cbl",
+            "block": "P300-RECOVER-CURSOR",
+            "role": "cursor recovery"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "DB2RECV.cbl",
+            "block": "P100-RECOVER-CONNECTION",
+            "code": "       P100-RECOVER-CONNECTION.\n           MOVE 0 TO WS-RETRY-COUNT.\n           \n           PERFORM UNTIL WS-RETRY-COUNT >= WS-MAX-RETRIES\n              PERFORM P110-ATTEMPT-RECONNECT\n                 THRU P110-EXIT\n                 \n              IF RECV-SUCCESS\n                 EXIT PERFORM\n              ELSE\n                 PERFORM P120-WAIT-INTERVAL",
+            "supports_requirement": [
+              "REQ-076"
+            ]
+          },
+          {
+            "file": "DB2RECV.cbl",
+            "block": "P120-WAIT-INTERVAL",
+            "code": "       P120-WAIT-INTERVAL.\n           EXEC CICS DELAY\n                     INTERVAL(WS-RETRY-INTERVAL)",
+            "supports_requirement": [
+              "REQ-076"
+            ]
+          },
+          {
+            "file": "DB2RECV.cbl",
+            "block": "P300-RECOVER-CURSOR",
+            "code": "       P300-RECOVER-CURSOR.\n           MOVE SPACES TO WS-ERROR-AREA.\n           MOVE RECV-PROGRAM TO ERR-PROGRAM.\n           MOVE RECV-CURSOR TO ERR-PARAGRAPH.\n           MOVE RECV-SQLCODE TO ERR-SQLCODE.\n           SET ERR-WARNING TO TRUE.\n           \n           EXEC CICS LINK PROGRAM('ERRHNDL')",
+            "supports_requirement": [
+              "REQ-076"
+            ]
+          }
+        ],
+        "rationale": "The recovery handler loops through reconnect attempts with delays, and on cursor recovery it forwards error context to the shared error handler."
+      }
+    },
+    {
+      "id": "REQ-077",
+      "requirement": "The system shall open the transaction-history file, load batch control state, and update DB2 history rows during history load processing.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "HISTLD00.cbl",
+            "block": "1100-OPEN-FILES",
+            "role": "file open"
+          },
+          {
+            "file": "HISTLD00.cbl",
+            "block": "1200-CONNECT-DB2",
+            "role": "db2 connect"
+          },
+          {
+            "file": "HISTLD00.cbl",
+            "block": "1300-INIT-CHECKPOINTS",
+            "role": "checkpoint setup"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "HISTLD00.cbl",
+            "block": "1100-OPEN-FILES",
+            "code": "       1100-OPEN-FILES.\n           OPEN INPUT TRANSACTION-HISTORY\n           OPEN I-O   BATCH-CONTROL-FILE\n           \n           IF WS-FILE-STATUS NOT = '00'\n               MOVE 'Error opening history files' TO ERR-TEXT\n               PERFORM 9000-ERROR-ROUTINE",
+            "supports_requirement": [
+              "REQ-077"
+            ]
+          },
+          {
+            "file": "HISTLD00.cbl",
+            "block": "1300-INIT-CHECKPOINTS",
+            "code": "       1300-INIT-CHECKPOINTS.\n           MOVE SPACES TO BCT-KEY\n           MOVE 'HISTLD00' TO BCT-JOB-NAME\n           \n           READ BATCH-CONTROL-FILE\n               INVALID KEY\n                   MOVE 'Control record not found' TO ERR-TEXT\n                   PERFORM 9000-ERROR-ROUTINE\n           END-READ",
+            "supports_requirement": [
+              "REQ-077"
+            ]
+          }
+        ],
+        "rationale": "The loader opens both input and control files, connects to DB2, and initializes the batch-control record used for restart and commit tracking."
+      }
+    },
+    {
+      "id": "REQ-078",
+      "requirement": "The system shall use the batch-control record to recover a single process, a date's processes, or all processes.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "RCVPRC00.cbl",
+            "block": "0000-MAIN",
+            "role": "dispatch"
+          },
+          {
+            "file": "RCVPRC00.cbl",
+            "block": "1300-SET-RECOVERY-MODE",
+            "role": "mode selection"
+          },
+          {
+            "file": "RCVPRC00.cbl",
+            "block": "2100-RECOVER-PROCESS",
+            "role": "single process"
+          },
+          {
+            "file": "RCVPRC00.cbl",
+            "block": "2200-RECOVER-SEQUENCE",
+            "role": "date sequence"
+          },
+          {
+            "file": "RCVPRC00.cbl",
+            "block": "2300-RECOVER-ALL",
+            "role": "all processes"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "RCVPRC00.cbl",
+            "block": "0000-MAIN",
+            "code": "       0000-MAIN.\n           EVALUATE TRUE\n               WHEN FUNC-INIT\n                   PERFORM 1000-INITIALIZE-RECOVERY\n               WHEN FUNC-RECV\n                   PERFORM 2000-PROCESS-RECOVERY\n               WHEN FUNC-TERM\n                   PERFORM 3000-TERMINATE-RECOVERY",
+            "supports_requirement": [
+              "REQ-078"
+            ]
+          },
+          {
+            "file": "RCVPRC00.cbl",
+            "block": "1300-SET-RECOVERY-MODE",
+            "code": "       1300-SET-RECOVERY-MODE.\n           MOVE LS-RECOVERY-TYPE TO WS-RECOVERY-MODE\n           \n           IF WS-RECOVER-PROCESS AND LS-PROCESS-ID = SPACES\n               MOVE 'Process ID required for process recovery'\n                 TO ERR-TEXT\n               PERFORM 9000-ERROR-ROUTINE",
+            "supports_requirement": [
+              "REQ-078"
+            ]
+          },
+          {
+            "file": "RCVPRC00.cbl",
+            "block": "2200-RECOVER-SEQUENCE",
+            "code": "       2200-RECOVER-SEQUENCE.\n           MOVE LS-PROCESS-DATE TO BCT-PROCESS-DATE\n           MOVE LOW-VALUES TO BCT-JOB-NAME\n           \n           START BATCH-CONTROL-FILE KEY > BCT-KEY",
+            "supports_requirement": [
+              "REQ-078"
+            ]
+          },
+          {
+            "file": "RCVPRC00.cbl",
+            "block": "2300-RECOVER-ALL",
+            "code": "       2300-RECOVER-ALL.\n           MOVE LOW-VALUES TO BCT-KEY\n           \n           START BATCH-CONTROL-FILE KEY > BCT-KEY\n               INVALID KEY\n                   MOVE 'No processes found' TO ERR-TEXT\n                   PERFORM 9000-ERROR-ROUTINE",
+            "supports_requirement": [
+              "REQ-078"
+            ]
+          }
+        ],
+        "rationale": "The recovery processor dispatches by function and then handles one-process, by-date, or full recovery paths using the batch-control file."
+      }
+    },
+    {
+      "id": "REQ-079",
+      "requirement": "The system shall log errors through the shared error-handler program with program, paragraph, SQL, and CICS context.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ERRHNDL.cbl",
+            "block": "P100-INIT-ERROR-HANDLER",
+            "role": "init"
+          },
+          {
+            "file": "ERRHNDL.cbl",
+            "block": "P200-LOG-ERROR",
+            "role": "log"
+          },
+          {
+            "file": "ERRHNDL.cbl",
+            "block": "P300-FORMAT-MESSAGE",
+            "role": "format"
+          },
+          {
+            "file": "ERRHNDL.cbl",
+            "block": "P400-DETERMINE-ACTION",
+            "role": "action"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ERRHNDL.cbl",
+            "block": "P200-LOG-ERROR",
+            "code": "P200-LOG-ERROR.\n   MOVE ERR-TIMESTAMP    TO LOG-TIMESTAMP.\n   MOVE ERR-PROGRAM      TO LOG-PROGRAM.\n   MOVE ERR-PARAGRAPH    TO LOG-PARAGRAPH.\n   MOVE ERR-SQLCODE      TO LOG-SQLCODE.\n   MOVE ERR-CICS-RESP    TO LOG-CICS-RESP.\n   MOVE ERR-SEVERITY     TO LOG-SEVERITY.",
+            "supports_requirement": [
+              "REQ-079"
+            ]
+          },
+          {
+            "file": "ERRHNDL.cbl",
+            "block": "P400-DETERMINE-ACTION",
+            "code": "P400-DETERMINE-ACTION.\n   EVALUATE TRUE\n       WHEN ERR-FATAL\n            SET ERR-ABEND TO TRUE\n       WHEN ERR-WARNING\n            SET ERR-CONTINUE TO TRUE\n       WHEN ERR-INFO\n            SET ERR-CONTINUE TO TRUE\n       WHEN OTHER\n            SET ERR-RETURN TO TRUE",
+            "supports_requirement": [
+              "REQ-079"
+            ]
+          }
+        ],
+        "rationale": "The shared handler captures structured error context, formats it, and decides whether to abend, continue, or return based on severity."
+      }
+    },
+    {
+      "id": "REQ-080",
+      "requirement": "The system shall initialize online inquiry processing and support portfolio and history inquiry flows through the CICS interface.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "INQONLN.cbl",
+            "block": "P100-PROCESS-REQUEST",
+            "role": "request processing"
+          },
+          {
+            "file": "INQONLN.cbl",
+            "block": "P200-DISPLAY-MENU",
+            "role": "menu"
+          },
+          {
+            "file": "INQONLN.cbl",
+            "block": "P300-PORTFOLIO-INQUIRY",
+            "role": "portfolio inquiry"
+          },
+          {
+            "file": "INQONLN.cbl",
+            "block": "P400-HISTORY-INQUIRY",
+            "role": "history inquiry"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "INQONLN.cbl",
+            "block": "P100-PROCESS-REQUEST",
+            "code": "       P100-PROCESS-REQUEST.\n           MOVE LOW-VALUES TO WS-COMMAREA.\n           \n           EXEC CICS RECEIVE MAP('INQMAP')\n                     MAPSET('INQSET')\n                     INTO(WS-COMMAREA)\n                     RESP(WS-RESPONSE-CODE)\n           END-EXEC.\n           \n           EVALUATE WS-COMMAREA-FUNCTION",
+            "supports_requirement": [
+              "REQ-080"
+            ]
+          },
+          {
+            "file": "INQONLN.cbl",
+            "block": "P300-PORTFOLIO-INQUIRY",
+            "code": "       P300-PORTFOLIO-INQUIRY.\n           EXEC CICS LINK PROGRAM('INQPORT')\n                     COMMAREA(WS-COMMAREA)\n                     LENGTH(LENGTH OF WS-COMMAREA)\n                     RESP(WS-RESPONSE-CODE)\n           END-EXEC.",
+            "supports_requirement": [
+              "REQ-080"
+            ]
+          },
+          {
+            "file": "INQONLN.cbl",
+            "block": "P400-HISTORY-INQUIRY",
+            "code": "       P400-HISTORY-INQUIRY.\n           EXEC CICS LINK PROGRAM('INQHIST')\n                     COMMAREA(WS-COMMAREA)\n                     LENGTH(LENGTH OF WS-COMMAREA)\n                     RESP(WS-RESPONSE-CODE)",
+            "supports_requirement": [
+              "REQ-080"
+            ]
+          }
+        ],
+        "rationale": "The online front end receives the map input and links to the portfolio or history inquiry programs through standard CICS calls."
+      }
+    },
+    {
+      "id": "REQ-081",
+      "requirement": "The system shall validate a user's access to a requested resource by capturing the current CICS user id and checking authorization against the DB2 authorization file.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "SECMGR.cbl",
+            "block": "P100-VALIDATE-USER",
+            "role": "capture current user id"
+          },
+          {
+            "file": "SECMGR.cbl",
+            "block": "P200-CHECK-AUTH",
+            "role": "check resource authorization"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "SECMGR.cbl",
+            "block": "P100-VALIDATE-USER",
+            "code": "P100-VALIDATE-USER.\n           EXEC CICS ASSIGN\n                     USERID(WS-USER-ID)\n                     RESP(SEC-RESPONSE-CODE)",
+            "supports_requirement": [
+              "REQ-081"
+            ]
+          },
+          {
+            "file": "SECMGR.cbl",
+            "block": "P200-CHECK-AUTH",
+            "code": "P200-CHECK-AUTH.\n           EXEC SQL\n                SELECT COUNT(*)\n                INTO :WS-DB2-AREA\n                FROM AUTHFILE\n                WHERE USER_ID = :SEC-USER-ID\n                  AND RESOURCE = :SEC-RESOURCE-NAME\n                  AND ACCESS_TYPE = :SEC-ACCESS-TYPE",
+            "supports_requirement": [
+              "REQ-081"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the program captures the active CICS user id and then performs a DB2 authorization lookup against the requested resource and access type."
+      }
+    },
+    {
+      "id": "REQ-082",
+      "requirement": "The system shall log approved access attempts with timestamp, user, terminal, transaction id, program, and access type.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "SECMGR.cbl",
+            "block": "P300-LOG-ACCESS",
+            "role": "write access audit record"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "SECMGR.cbl",
+            "block": "P300-LOG-ACCESS",
+            "code": "P300-LOG-ACCESS.\n           MOVE FUNCTION CURRENT-DATE TO WS-TIMESTAMP.\n\n           EXEC CICS ASSIGN\n                     USERID(WS-USER-ID)\n                     TERMID(WS-TERMINAL-ID)\n                     TRANSID(WS-TRANSACTION-ID)\n           END-EXEC.\n\n           MOVE SEC-RESOURCE-NAME TO WS-PROGRAM-NAME.\n           MOVE SEC-ACCESS-TYPE TO WS-ACCESS-TYPE.",
+            "supports_requirement": [
+              "REQ-082"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the access logger collects the runtime context fields and prepares them for insertion into AUDITLOG."
+      }
+    },
+    {
+      "id": "REQ-083",
+      "requirement": "The system shall normalize incoming error context, add a trace id when missing, and format a readable error message before logging.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ERRHNDL.cbl",
+            "block": "P100-INIT-ERROR-HANDLER",
+            "role": "initialize error context"
+          },
+          {
+            "file": "ERRHNDL.cbl",
+            "block": "P300-FORMAT-MESSAGE",
+            "role": "format message text"
+          },
+          {
+            "file": "ERRHNDL.cbl",
+            "block": "P200-LOG-ERROR",
+            "role": "write error log row"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ERRHNDL.cbl",
+            "block": "P100-INIT-ERROR-HANDLER",
+            "code": "P100-INIT-ERROR-HANDLER.\n   MOVE DFHCOMMAREA TO WS-ERROR-AREA.\n\n   MOVE FUNCTION CURRENT-DATE TO ERR-TIMESTAMP.\n\n   IF ERR-TRACE-ID = SPACES\n      MOVE FUNCTION RANDOM TO ERR-TRACE-ID",
+            "supports_requirement": [
+              "REQ-083"
+            ]
+          },
+          {
+            "file": "ERRHNDL.cbl",
+            "block": "P300-FORMAT-MESSAGE",
+            "code": "P300-FORMAT-MESSAGE.\n   STRING 'Error in ' DELIMITED BY SIZE\n          ERR-PROGRAM DELIMITED BY SPACE\n          ' - ' DELIMITED BY SIZE\n          ERR-MESSAGE DELIMITED BY SIZE\n          ' (' DELIMITED BY SIZE\n          ERR-TRACE-ID DELIMITED BY SIZE\n          ')' DELIMITED BY SIZE\n          INTO ERR-MESSAGE.",
+            "supports_requirement": [
+              "REQ-083"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the error handler copies the incoming COMMAREA, assigns a trace id if needed, and formats the message text used for logging."
+      }
+    },
+    {
+      "id": "REQ-084",
+      "requirement": "The system shall map error severity to a recovery action of abend, continue, or return.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ERRHNDL.cbl",
+            "block": "P400-DETERMINE-ACTION",
+            "role": "choose severity-based action"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ERRHNDL.cbl",
+            "block": "P400-DETERMINE-ACTION",
+            "code": "P400-DETERMINE-ACTION.\n   EVALUATE TRUE\n       WHEN ERR-FATAL\n            SET ERR-ABEND TO TRUE\n       WHEN ERR-WARNING\n            SET ERR-CONTINUE TO TRUE\n       WHEN ERR-INFO\n            SET ERR-CONTINUE TO TRUE\n       WHEN OTHER\n            SET ERR-RETURN TO TRUE",
+            "supports_requirement": [
+              "REQ-084"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the decision block explicitly routes fatal errors to abend, warnings and info to continue, and all other cases to return."
+      }
+    },
+    {
+      "id": "REQ-085",
+      "requirement": "The system shall establish a DB2 connection only when the active connection limit has not been reached and shall generate a connection token on success.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "DB2ONLN.cbl",
+            "block": "P100-PROCESS-CONNECT",
+            "role": "gate connection attempts"
+          },
+          {
+            "file": "DB2ONLN.cbl",
+            "block": "P110-ESTABLISH-CONNECTION",
+            "role": "connect to DB2"
+          },
+          {
+            "file": "DB2ONLN.cbl",
+            "block": "P120-GENERATE-TOKEN",
+            "role": "build connection token"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "DB2ONLN.cbl",
+            "block": "P100-PROCESS-CONNECT",
+            "code": "P100-PROCESS-CONNECT.\n           IF WS-ACTIVE-CONNECTIONS < WS-MAX-CONNECTIONS\n              PERFORM P110-ESTABLISH-CONNECTION\n                 THRU P110-EXIT\n           ELSE\n              MOVE 'Maximum connections reached' \n                TO DB2-ERROR-MSG\n              MOVE -1 TO DB2-RESPONSE-CODE",
+            "supports_requirement": [
+              "REQ-085"
+            ]
+          },
+          {
+            "file": "DB2ONLN.cbl",
+            "block": "P110-ESTABLISH-CONNECTION",
+            "code": "P110-ESTABLISH-CONNECTION.\n           EXEC SQL CONNECT TO POSMVP END-EXEC.\n\n           IF SQLCODE = 0\n              ADD 1 TO WS-ACTIVE-CONNECTIONS\n              MOVE SQLCODE TO DB2-SQLCODE\n              MOVE 0 TO DB2-RESPONSE-CODE\n              PERFORM P120-GENERATE-TOKEN\n                 THRU P120-EXIT",
+            "supports_requirement": [
+              "REQ-085"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the connect flow enforces a connection cap, performs the DB2 connect, increments the active count, and then generates a token for the session."
+      }
+    },
+    {
+      "id": "REQ-086",
+      "requirement": "The system shall disconnect from DB2 and decrement the active connection count when the disconnect succeeds.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "DB2ONLN.cbl",
+            "block": "P200-PROCESS-DISCONNECT",
+            "role": "disconnect from DB2"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "DB2ONLN.cbl",
+            "block": "P200-PROCESS-DISCONNECT",
+            "code": "P200-PROCESS-DISCONNECT.\n           EXEC SQL DISCONNECT END-EXEC.\n\n           IF SQLCODE = 0\n              SUBTRACT 1 FROM WS-ACTIVE-CONNECTIONS\n              MOVE 0 TO DB2-RESPONSE-CODE\n           ELSE\n              MOVE SQLCODE TO DB2-SQLCODE\n              MOVE SQLERRMC TO DB2-ERROR-MSG\n              MOVE -1 TO DB2-RESPONSE-CODE",
+            "supports_requirement": [
+              "REQ-086"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the disconnect path explicitly issues SQL DISCONNECT and adjusts the active connection counter on success."
+      }
+    },
+    {
+      "id": "REQ-087",
+      "requirement": "The system shall query the current DB2 server status and surface either a successful response or a failure code.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "DB2ONLN.cbl",
+            "block": "P300-CHECK-STATUS",
+            "role": "check DB2 status"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "DB2ONLN.cbl",
+            "block": "P300-CHECK-STATUS",
+            "code": "P300-CHECK-STATUS.\n           EXEC SQL SELECT CURRENT SERVER \n                    INTO :DB2-ERROR-MSG\n           END-EXEC.\n\n           IF SQLCODE = 0\n              MOVE 0 TO DB2-RESPONSE-CODE\n           ELSE\n              MOVE SQLCODE TO DB2-SQLCODE\n              MOVE -1 TO DB2-RESPONSE-CODE\n           END-IF.",
+            "supports_requirement": [
+              "REQ-087"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the status routine queries the current server, checks SQLCODE, and stores the resulting response code."
+      }
+    },
+    {
+      "id": "REQ-088",
+      "requirement": "The system shall retry DB2 connection recovery through DB2ONLN until the maximum retry count is reached or the reconnect succeeds.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "DB2RECV.cbl",
+            "block": "P100-RECOVER-CONNECTION",
+            "role": "control retry loop"
+          },
+          {
+            "file": "DB2RECV.cbl",
+            "block": "P110-ATTEMPT-RECONNECT",
+            "role": "call DB2 connection manager"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "DB2RECV.cbl",
+            "block": "P100-RECOVER-CONNECTION",
+            "code": "P100-RECOVER-CONNECTION.\n           MOVE 0 TO WS-RETRY-COUNT.\n\n           PERFORM UNTIL WS-RETRY-COUNT >= WS-MAX-RETRIES\n              PERFORM P110-ATTEMPT-RECONNECT\n                 THRU P110-EXIT\n\n              IF RECV-SUCCESS\n                 EXIT PERFORM\n              ELSE\n                 PERFORM P120-WAIT-INTERVAL\n                    THRU P120-EXIT\n                 ADD 1 TO WS-RETRY-COUNT\n              END-IF",
+            "supports_requirement": [
+              "REQ-088"
+            ]
+          },
+          {
+            "file": "DB2RECV.cbl",
+            "block": "P110-ATTEMPT-RECONNECT",
+            "code": "P110-ATTEMPT-RECONNECT.\n           MOVE 'C' TO DB2-REQUEST-TYPE OF WS-DB2-REQUEST.\n\n           EXEC CICS LINK PROGRAM('DB2ONLN')\n                     COMMAREA(WS-DB2-REQUEST)\n                     LENGTH(LENGTH OF WS-DB2-REQUEST)",
+            "supports_requirement": [
+              "REQ-088"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the recovery loop repeatedly invokes DB2ONLN and stops as soon as the reconnect succeeds."
+      }
+    },
+    {
+      "id": "REQ-089",
+      "requirement": "The system shall wait between reconnect attempts using a CICS delay interval.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "DB2RECV.cbl",
+            "block": "P120-WAIT-INTERVAL",
+            "role": "pause before next reconnect attempt"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "DB2RECV.cbl",
+            "block": "P120-WAIT-INTERVAL",
+            "code": "P120-WAIT-INTERVAL.\n           EXEC CICS DELAY\n                     INTERVAL(WS-RETRY-INTERVAL)",
+            "supports_requirement": [
+              "REQ-089"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the retry wait routine uses EXEC CICS DELAY with the configured retry interval."
+      }
+    },
+    {
+      "id": "REQ-090",
+      "requirement": "The system shall roll back an in-flight DB2 transaction and mark the recovery result as success or failure.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "DB2RECV.cbl",
+            "block": "P200-RECOVER-TRANSACTION",
+            "role": "rollback transaction"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "DB2RECV.cbl",
+            "block": "P200-RECOVER-TRANSACTION",
+            "code": "P200-RECOVER-TRANSACTION.\n           EXEC SQL ROLLBACK END-EXEC.\n\n           IF SQLCODE = 0\n              SET RECV-SUCCESS TO TRUE\n              MOVE 0 TO RECV-RESPONSE-CODE\n           ELSE\n              SET RECV-FAILED TO TRUE\n              MOVE SQLCODE TO RECV-SQLCODE\n              MOVE -1 TO RECV-RESPONSE-CODE",
+            "supports_requirement": [
+              "REQ-090"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the recovery routine explicitly rolls back the SQL unit of work and sets success or failure flags from SQLCODE."
+      }
+    },
+    {
+      "id": "REQ-091",
+      "requirement": "The system shall initialize batch control processing by opening the control file, reading the control record, validating the process, and updating the start status.",
+      "ground_truth": {
+        "status": "PARTIALLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "BCHCTL00.cbl",
+            "block": "1000-PROCESS-INITIALIZE",
+            "role": "start batch initialization"
+          },
+          {
+            "file": "BCHCTL00.cbl",
+            "block": "2000-CHECK-PREREQUISITES",
+            "role": "check prerequisites"
+          },
+          {
+            "file": "BCHCTL00.cbl",
+            "block": "3000-UPDATE-STATUS",
+            "role": "update status"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "BCHCTL00.cbl",
+            "block": "1000-PROCESS-INITIALIZE",
+            "code": "1000-PROCESS-INITIALIZE.\n    PERFORM 1100-OPEN-FILES\n    PERFORM 1200-READ-CONTROL-RECORD\n    PERFORM 1300-VALIDATE-PROCESS\n    PERFORM 1400-UPDATE-START-STATUS\n    .",
+            "supports_requirement": [
+              "REQ-091"
+            ]
+          }
+        ],
+        "rationale": "This requirement is only partially implemented because the main control flow is present, but the detailed procedures it performs are explicitly listed as to-be-implemented in the source."
+      }
+    },
+    {
+      "id": "REQ-092",
+      "requirement": "The system shall assign a success return code when batch prerequisites are satisfied and a warning return code when they are not.",
+      "ground_truth": {
+        "status": "PARTIALLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "BCHCTL00.cbl",
+            "block": "2000-CHECK-PREREQUISITES",
+            "role": "evaluate prerequisites"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "BCHCTL00.cbl",
+            "block": "2000-CHECK-PREREQUISITES",
+            "code": "2000-CHECK-PREREQUISITES.\n    PERFORM 2100-READ-CONTROL-RECORD\n    PERFORM 2200-CHECK-DEPENDENCIES\n    IF PREREQS-SATISFIED\n        MOVE BCT-RC-SUCCESS TO LS-RETURN-CODE\n    ELSE\n        MOVE BCT-RC-WARNING TO LS-RETURN-CODE\n    END-IF\n    .",
+            "supports_requirement": [
+              "REQ-092"
+            ]
+          }
+        ],
+        "rationale": "This requirement is partially implemented because the decision logic is present, but the prerequisite subroutines it depends on are marked for implementation later in the file."
+      }
+    },
+    {
+      "id": "REQ-093",
+      "requirement": "The system shall update the batch control record status by reading the record, applying the process status change, and writing the control record back.",
+      "ground_truth": {
+        "status": "PARTIALLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "BCHCTL00.cbl",
+            "block": "3000-UPDATE-STATUS",
+            "role": "update process status"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "BCHCTL00.cbl",
+            "block": "3000-UPDATE-STATUS",
+            "code": "3000-UPDATE-STATUS.\n    PERFORM 3100-READ-CONTROL-RECORD\n    PERFORM 3200-UPDATE-PROCESS-STATUS\n    PERFORM 3300-WRITE-CONTROL-RECORD\n    .",
+            "supports_requirement": [
+              "REQ-093"
+            ]
+          }
+        ],
+        "rationale": "This requirement is partially implemented because the update flow exists, but the referenced record-read and write routines are not defined in the same source."
+      }
+    },
+    {
+      "id": "REQ-094",
+      "requirement": "The system shall read position master records sequentially and format each position into a report line.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "RPTPOS00.cbl",
+            "block": "2100-READ-POSITIONS",
+            "role": "iterate through positions"
+          },
+          {
+            "file": "RPTPOS00.cbl",
+            "block": "2110-FORMAT-POSITION",
+            "role": "format position line"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "RPTPOS00.cbl",
+            "block": "2100-READ-POSITIONS",
+            "code": "2100-READ-POSITIONS.\n    READ POSITION-MASTER\n        AT END SET END-OF-POSITIONS TO TRUE\n    END-READ\n\n    PERFORM UNTIL END-OF-POSITIONS\n        PERFORM 2110-FORMAT-POSITION\n        READ POSITION-MASTER\n            AT END SET END-OF-POSITIONS TO TRUE\n        END-READ",
+            "supports_requirement": [
+              "REQ-094"
+            ]
+          },
+          {
+            "file": "RPTPOS00.cbl",
+            "block": "2110-FORMAT-POSITION",
+            "code": "2110-FORMAT-POSITION.\n    MOVE POS-PORTFOLIO-ID   TO WS-POS-PORTFOLIO\n    MOVE POS-DESCRIPTION    TO WS-POS-DESCRIPTION\n    MOVE POS-QUANTITY       TO WS-POS-QUANTITY\n    MOVE POS-CURRENT-VALUE  TO WS-POS-VALUE\n    COMPUTE WS-POS-CHANGE-PCT = \n        (POS-CURRENT-VALUE - POS-PREVIOUS-VALUE) /\n         POS-PREVIOUS-VALUE * 100\n    WRITE REPORT-RECORD FROM WS-POSITION-DETAIL.",
+            "supports_requirement": [
+              "REQ-094"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the report reads every position record, formats the values, computes a change percentage, and writes each report detail line."
+      }
+    },
+    {
+      "id": "REQ-095",
+      "requirement": "The system shall summarize transaction activity for the position report before writing the report summary section.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "RPTPOS00.cbl",
+            "block": "2200-PROCESS-TRANSACTIONS",
+            "role": "summarize activity"
+          },
+          {
+            "file": "RPTPOS00.cbl",
+            "block": "2300-WRITE-SUMMARY",
+            "role": "write summary lines"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "RPTPOS00.cbl",
+            "block": "2200-PROCESS-TRANSACTIONS",
+            "code": "2200-PROCESS-TRANSACTIONS.\n    PERFORM 2210-READ-TRANSACTIONS\n    PERFORM 2220-SUMMARIZE-ACTIVITY.",
+            "supports_requirement": [
+              "REQ-095"
+            ]
+          },
+          {
+            "file": "RPTPOS00.cbl",
+            "block": "2300-WRITE-SUMMARY",
+            "code": "2300-WRITE-SUMMARY.\n    PERFORM 2310-WRITE-TOTALS\n    PERFORM 2320-WRITE-EXCEPTIONS\n    PERFORM 2330-WRITE-METRICS.",
+            "supports_requirement": [
+              "REQ-095"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the position report aggregates transaction activity and then writes totals, exceptions, and metrics in the summary section."
+      }
+    },
+    {
+      "id": "REQ-096",
+      "requirement": "The system shall process DB2 statistics, combine them with batch statistics, and calculate summary metrics for the report.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "RPTSTA00.cbl",
+            "block": "2100-PROCESS-DB2-STATS",
+            "role": "read DB2 stats"
+          },
+          {
+            "file": "RPTSTA00.cbl",
+            "block": "2300-CALCULATE-METRICS",
+            "role": "derive metrics"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "RPTSTA00.cbl",
+            "block": "2100-PROCESS-DB2-STATS",
+            "code": "2100-PROCESS-DB2-STATS.\n    READ DB2-STATS\n        AT END SET END-OF-DB2-STATS TO TRUE\n    END-READ\n\n    PERFORM UNTIL END-OF-DB2-STATS\n        PERFORM 2110-ACCUMULATE-DB2-STATS\n        READ DB2-STATS\n            AT END SET END-OF-DB2-STATS TO TRUE\n        END-READ",
+            "supports_requirement": [
+              "REQ-096"
+            ]
+          },
+          {
+            "file": "RPTSTA00.cbl",
+            "block": "2300-CALCULATE-METRICS",
+            "code": "2300-CALCULATE-METRICS.\n    PERFORM 2310-CALC-DB2-METRICS\n    PERFORM 2320-CALC-BATCH-METRICS.",
+            "supports_requirement": [
+              "REQ-096"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the report accumulates DB2 statistics and then calculates both DB2 and batch metrics before output."
+      }
+    },
+    {
+      "id": "REQ-097",
+      "requirement": "The system shall summarize the audit trail and the error log into report sections.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "RPTAUD00.cbl",
+            "block": "2100-PROCESS-AUDIT-TRAIL",
+            "role": "process audit records"
+          },
+          {
+            "file": "RPTAUD00.cbl",
+            "block": "2200-PROCESS-ERROR-LOG",
+            "role": "process error records"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "RPTAUD00.cbl",
+            "block": "2100-PROCESS-AUDIT-TRAIL",
+            "code": "2100-PROCESS-AUDIT-TRAIL.\n    PERFORM 2110-READ-AUDIT-RECORDS\n    PERFORM 2120-SUMMARIZE-AUDIT.",
+            "supports_requirement": [
+              "REQ-097"
+            ]
+          },
+          {
+            "file": "RPTAUD00.cbl",
+            "block": "2200-PROCESS-ERROR-LOG",
+            "code": "2200-PROCESS-ERROR-LOG.\n    PERFORM 2210-READ-ERROR-RECORDS\n    PERFORM 2220-SUMMARIZE-ERRORS.",
+            "supports_requirement": [
+              "REQ-097"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the report separately summarizes audit activity and error records before writing its output."
+      }
+    },
+    {
+      "id": "REQ-098",
+      "requirement": "The system shall initialize the return-code workspace before collecting or analyzing any program return codes.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "RTNCDE00.cbl",
+            "block": "P100-INIT-RETURN-CODES",
+            "role": "initialize return-code area"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "RTNCDE00.cbl",
+            "block": "P100-INIT-RETURN-CODES",
+            "code": "P100-INIT-RETURN-CODES.\n           INITIALIZE RC-CODES-AREA.\n           MOVE SPACES TO RC-PROGRAM-ID.\n           MOVE 0 TO RC-CURRENT-CODE.\n           MOVE 0 TO RC-HIGHEST-CODE.\n           SET RC-STATUS-SUCCESS TO TRUE.\n           MOVE 0 TO RC-RESPONSE-CODE.",
+            "supports_requirement": [
+              "REQ-098"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the initialization routine clears the code area, resets counters, and sets the success status before processing begins."
+      }
+    },
+    {
+      "id": "REQ-099",
+      "requirement": "The system shall update the highest observed return code when a new return code exceeds the previous maximum.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "RTNCDE00.cbl",
+            "block": "P200-SET-RETURN-CODE",
+            "role": "track highest code"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "RTNCDE00.cbl",
+            "block": "P200-SET-RETURN-CODE",
+            "code": "P200-SET-RETURN-CODE.\n           IF RC-NEW-CODE > RC-HIGHEST-CODE\n              MOVE RC-NEW-CODE TO RC-HIGHEST-CODE",
+            "supports_requirement": [
+              "REQ-099"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the routine explicitly compares the incoming code to the stored maximum and replaces it when the new value is larger."
+      }
+    },
+    {
+      "id": "REQ-100",
+      "requirement": "The system shall log current and highest return codes to RTNCODES and then analyze stored codes for a program over a date range.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "RTNCDE00.cbl",
+            "block": "P400-LOG-RETURN-CODE",
+            "role": "persist return code"
+          },
+          {
+            "file": "RTNCDE00.cbl",
+            "block": "P500-ANALYZE-CODES",
+            "role": "query return-code history"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "RTNCDE00.cbl",
+            "block": "P400-LOG-RETURN-CODE",
+            "code": "P400-LOG-RETURN-CODE.\n           MOVE FUNCTION CURRENT-DATE TO WS-CURRENT-TIME.\n\n           EXEC SQL\n                INSERT INTO RTNCODES\n                (TIMESTAMP,\n                 PROGRAM_ID,\n                 RETURN_CODE,\n                 HIGHEST_CODE,\n                 STATUS_CODE,\n                 MESSAGE_TEXT)",
+            "supports_requirement": [
+              "REQ-100"
+            ]
+          },
+          {
+            "file": "RTNCDE00.cbl",
+            "block": "P500-ANALYZE-CODES",
+            "code": "P500-ANALYZE-CODES.\n           EXEC SQL\n                SELECT COUNT(*),\n                       MAX(RETURN_CODE),\n                       MIN(RETURN_CODE)\n                INTO :RC-TOTAL-CODES,\n                     :RC-MAX-CODE,\n                     :RC-MIN-CODE\n                FROM RTNCODES\n                WHERE PROGRAM_ID = :RC-PROGRAM-ID\n                  AND TIMESTAMP >= :RC-START-TIME",
+            "supports_requirement": [
+              "REQ-100"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the code both stores return-code events in RTNCODES and computes aggregate return-code statistics for a program and time window."
+      }
+    },
+    {
+      "id": "REQ-101",
+      "requirement": "The system shall generate a program-level return-code analysis cursor that counts successes, warnings, errors, and severe failures.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "RTNANA00.cbl",
+            "block": "P200-PROCESS-ANALYSIS",
+            "role": "define analysis cursor"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "RTNANA00.cbl",
+            "block": "P200-PROCESS-ANALYSIS",
+            "code": "P200-PROCESS-ANALYSIS.\n           EXEC SQL\n                DECLARE PRGCUR CURSOR FOR\n                SELECT PROGRAM_ID,\n                       COUNT(*) AS TOTAL,\n                       COUNT(CASE WHEN STATUS_CODE = 'S' THEN 1 END),\n                       COUNT(CASE WHEN STATUS_CODE = 'W' THEN 1 END),\n                       COUNT(CASE WHEN STATUS_CODE = 'E' THEN 1 END),\n                       COUNT(CASE WHEN STATUS_CODE = 'F' THEN 1 END)\n                FROM RTNCODES",
+            "supports_requirement": [
+              "REQ-101"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the cursor query groups RTNCODES by program and counts each status class separately."
+      }
+    },
+    {
+      "id": "REQ-102",
+      "requirement": "The system shall dispatch file-maintenance requests to archive, cleanup, reorganization, or analysis processing based on the requested function.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "UTLMNT00.cbl",
+            "block": "2100-PROCESS-FUNCTION",
+            "role": "dispatch maintenance function"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "UTLMNT00.cbl",
+            "block": "2100-PROCESS-FUNCTION",
+            "code": "2100-PROCESS-FUNCTION.\n           EVALUATE CTL-FUNCTION\n               WHEN WS-ARCHIVE\n                   PERFORM 2200-ARCHIVE-PROCESS\n               WHEN WS-CLEANUP\n                   PERFORM 2300-CLEANUP-PROCESS\n               WHEN WS-REORG\n                   PERFORM 2400-REORG-PROCESS\n               WHEN WS-ANALYZE\n                   PERFORM 2500-ANALYZE-PROCESS",
+            "supports_requirement": [
+              "REQ-102"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the maintenance utility routes the control function to the correct maintenance routine."
+      }
+    },
+    {
+      "id": "REQ-103",
+      "requirement": "The system shall archive the selected VSAM file by opening it, copying its records, and closing the file afterward.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "UTLMNT00.cbl",
+            "block": "2200-ARCHIVE-PROCESS",
+            "role": "archive selected file"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "UTLMNT00.cbl",
+            "block": "2200-ARCHIVE-PROCESS",
+            "code": "2200-ARCHIVE-PROCESS.\n           MOVE CTL-FILE-NAME TO WS-VSAM-NAME\n           PERFORM 2210-OPEN-VSAM\n           PERFORM 2220-ARCHIVE-RECORDS\n           PERFORM 2230-CLOSE-VSAM.",
+            "supports_requirement": [
+              "REQ-103"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the archive routine explicitly opens the VSAM file, processes records, and closes the file."
+      }
+    },
+    {
+      "id": "REQ-104",
+      "requirement": "The system shall reorganize a VSAM file by exporting the data, deleting and redefining the dataset, and importing the data again.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "UTLMNT00.cbl",
+            "block": "2400-REORG-PROCESS",
+            "role": "reorganize dataset"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "UTLMNT00.cbl",
+            "block": "2400-REORG-PROCESS",
+            "code": "2400-REORG-PROCESS.\n           MOVE CTL-FILE-NAME TO WS-VSAM-NAME\n           PERFORM 2410-EXPORT-DATA\n           PERFORM 2420-DELETE-DEFINE\n           PERFORM 2430-IMPORT-DATA.",
+            "supports_requirement": [
+              "REQ-104"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the reorganization flow performs the standard export, delete-define, and import sequence."
+      }
+    },
+    {
+      "id": "REQ-105",
+      "requirement": "The system shall collect CPU, memory, DASD, and DB2 metrics during system monitoring.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "UTLMON00.cbl",
+            "block": "2100-COLLECT-METRICS",
+            "role": "collect resource metrics"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "UTLMON00.cbl",
+            "block": "2100-COLLECT-METRICS",
+            "code": "2100-COLLECT-METRICS.\n           PERFORM 2110-GET-CPU-METRICS\n           PERFORM 2120-GET-MEMORY-METRICS\n           PERFORM 2130-GET-DASD-METRICS\n           PERFORM 2140-GET-DB2-METRICS.",
+            "supports_requirement": [
+              "REQ-105"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the monitoring routine explicitly gathers all four resource categories."
+      }
+    },
+    {
+      "id": "REQ-106",
+      "requirement": "The system shall check monitoring thresholds and generate alerts when a threshold is met.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "UTLMON00.cbl",
+            "block": "2200-CHECK-THRESHOLDS",
+            "role": "evaluate thresholds"
+          },
+          {
+            "file": "UTLMON00.cbl",
+            "block": "2400-GENERATE-ALERTS",
+            "role": "create alerts"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "UTLMON00.cbl",
+            "block": "2200-CHECK-THRESHOLDS",
+            "code": "2200-CHECK-THRESHOLDS.\n           PERFORM 2210-CHECK-UTILIZATION\n           PERFORM 2220-CHECK-RESPONSE\n           PERFORM 2230-CHECK-QUEUES\n           PERFORM 2240-CHECK-ERRORS.",
+            "supports_requirement": [
+              "REQ-106"
+            ]
+          },
+          {
+            "file": "UTLMON00.cbl",
+            "block": "2400-GENERATE-ALERTS",
+            "code": "2400-GENERATE-ALERTS.\n           IF THRESHOLD-MET\n               PERFORM 2410-FORMAT-ALERT\n               PERFORM 2420-WRITE-ALERT",
+            "supports_requirement": [
+              "REQ-106"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the monitoring flow evaluates all thresholds and only emits alerts when a threshold condition is met."
+      }
+    },
+    {
+      "id": "REQ-107",
+      "requirement": "The system shall dispatch validation requests to integrity, cross-reference, or format checking based on the validation type.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "UTLVAL00.cbl",
+            "block": "2100-PROCESS-VALIDATION",
+            "role": "dispatch validation type"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "UTLVAL00.cbl",
+            "block": "2100-PROCESS-VALIDATION",
+            "code": "2100-PROCESS-VALIDATION.\n           EVALUATE VAL-TYPE\n               WHEN WS-INTEGRITY\n                   PERFORM 2200-CHECK-INTEGRITY\n               WHEN WS-XREF\n                   PERFORM 2300-CHECK-XREF\n               WHEN WS-FORMAT\n                   PERFORM 2400-CHECK-FORMAT\n               WHEN WS-BALANCE\n                   PERFORM 2500-CHECK-BALANCE",
+            "supports_requirement": [
+              "REQ-107"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the validation dispatcher selects the proper validation family from the incoming type code."
+      }
+    },
+    {
+      "id": "REQ-108",
+      "requirement": "The system shall verify integrity by checking both position and transaction records.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "UTLVAL00.cbl",
+            "block": "2200-CHECK-INTEGRITY",
+            "role": "check integrity"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "UTLVAL00.cbl",
+            "block": "2200-CHECK-INTEGRITY",
+            "code": "2200-CHECK-INTEGRITY.\n           PERFORM 2210-CHECK-POSITION-INTEGRITY\n           PERFORM 2220-CHECK-TRANSACTION-INTEGRITY.",
+            "supports_requirement": [
+              "REQ-108"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the integrity path explicitly checks both position and transaction integrity routines."
+      }
+    },
+    {
+      "id": "REQ-109",
+      "requirement": "The system shall validate cross-reference consistency and record format correctness for operational data.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "UTLVAL00.cbl",
+            "block": "2300-CHECK-XREF",
+            "role": "check cross-references"
+          },
+          {
+            "file": "UTLVAL00.cbl",
+            "block": "2400-CHECK-FORMAT",
+            "role": "check record format"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "UTLVAL00.cbl",
+            "block": "2300-CHECK-XREF",
+            "code": "2300-CHECK-XREF.\n           PERFORM 2310-CHECK-POSITION-XREF\n           PERFORM 2320-CHECK-TRANSACTION-XREF.",
+            "supports_requirement": [
+              "REQ-109"
+            ]
+          },
+          {
+            "file": "UTLVAL00.cbl",
+            "block": "2400-CHECK-FORMAT",
+            "code": "2400-CHECK-FORMAT.\n           PERFORM 2410-CHECK-POSITION-FORMAT\n           PERFORM 2420-CHECK-TRANSACTION-FORMAT.",
+            "supports_requirement": [
+              "REQ-109"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the validation utility explicitly runs both cross-reference and format checks for the supported datasets."
+      }
+    },
+    {
+      "id": "REQ-110",
+      "requirement": "The system shall generate different classes of test data based on the configured test type.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "TSTGEN00.cbl",
+            "block": "2100-GENERATE-TEST-DATA",
+            "role": "dispatch test data generation"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "TSTGEN00.cbl",
+            "block": "2100-GENERATE-TEST-DATA",
+            "code": "2100-GENERATE-TEST-DATA.\n           EVALUATE CFG-TEST-TYPE\n               WHEN WS-PORTFOLIO\n                   PERFORM 2200-GEN-PORTFOLIO\n               WHEN WS-TRANSACTION\n                   PERFORM 2300-GEN-TRANSACTION\n               WHEN WS-ERROR-TEST\n                   PERFORM 2400-GEN-ERROR-DATA\n               WHEN WS-VOLUME-TEST\n                   PERFORM 2500-GEN-VOLUME-DATA",
+            "supports_requirement": [
+              "REQ-110"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the generator selects a specific data-generation path for portfolio, transaction, error, or volume scenarios."
+      }
+    },
+    {
+      "id": "REQ-111",
+      "requirement": "The system shall generate portfolio and transaction test records in repeated loops up to the configured volume.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "TSTGEN00.cbl",
+            "block": "2200-GEN-PORTFOLIO",
+            "role": "generate portfolio data"
+          },
+          {
+            "file": "TSTGEN00.cbl",
+            "block": "2300-GEN-TRANSACTION",
+            "role": "generate transaction data"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "TSTGEN00.cbl",
+            "block": "2200-GEN-PORTFOLIO",
+            "code": "2200-GEN-PORTFOLIO.\n           PERFORM VARYING WS-RECORDS-WRITTEN FROM 1 BY 1\n                   UNTIL WS-RECORDS-WRITTEN > CFG-VOLUME\n               PERFORM 2210-GEN-PORT-DATA\n               PERFORM 2220-WRITE-PORT-RECORD\n           END-PERFORM.",
+            "supports_requirement": [
+              "REQ-111"
+            ]
+          },
+          {
+            "file": "TSTGEN00.cbl",
+            "block": "2300-GEN-TRANSACTION",
+            "code": "2300-GEN-TRANSACTION.\n           PERFORM VARYING WS-RECORDS-WRITTEN FROM 1 BY 1\n                   UNTIL WS-RECORDS-WRITTEN > CFG-VOLUME\n               PERFORM 2310-GEN-TRAN-DATA\n               PERFORM 2320-WRITE-TRAN-RECORD\n           END-PERFORM.",
+            "supports_requirement": [
+              "REQ-111"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because both generators loop over the configured volume and write the corresponding records for each iteration."
+      }
+    },
+    {
+      "id": "REQ-112",
+      "requirement": "The system shall generate error scenarios and large-volume scenarios for stress and negative testing.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "TSTGEN00.cbl",
+            "block": "2400-GEN-ERROR-DATA",
+            "role": "generate negative test data"
+          },
+          {
+            "file": "TSTGEN00.cbl",
+            "block": "2500-GEN-VOLUME-DATA",
+            "role": "generate high-volume data"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "TSTGEN00.cbl",
+            "block": "2400-GEN-ERROR-DATA",
+            "code": "2400-GEN-ERROR-DATA.\n           PERFORM 2410-GEN-DATA-ERRORS\n           PERFORM 2420-GEN-PROCESS-ERRORS.",
+            "supports_requirement": [
+              "REQ-112"
+            ]
+          },
+          {
+            "file": "TSTGEN00.cbl",
+            "block": "2500-GEN-VOLUME-DATA",
+            "code": "2500-GEN-VOLUME-DATA.\n           PERFORM 2510-GEN-LARGE-PORTFOLIO\n           PERFORM 2520-GEN-LARGE-TRANSACTION.",
+            "supports_requirement": [
+              "REQ-112"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the generator explicitly emits both error-condition data and large-volume test data."
+      }
+    },
+    {
+      "id": "REQ-113",
+      "requirement": "The system shall execute functional, integration, performance, or error tests depending on the test type and then write summary metrics.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "TSTVAL00.cbl",
+            "block": "2100-EXECUTE-TEST",
+            "role": "dispatch test execution"
+          },
+          {
+            "file": "TSTVAL00.cbl",
+            "block": "2900-WRITE-SUMMARY",
+            "role": "write summary results"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "TSTVAL00.cbl",
+            "block": "2100-EXECUTE-TEST",
+            "code": "2100-EXECUTE-TEST.\n           EVALUATE TEST-TYPE\n               WHEN WS-FUNCTIONAL\n                   PERFORM 2200-RUN-FUNCTIONAL-TEST\n               WHEN WS-INTEGRATION\n                   PERFORM 2300-RUN-INTEGRATION-TEST\n               WHEN WS-PERFORMANCE\n                   PERFORM 2400-RUN-PERFORMANCE-TEST\n               WHEN WS-ERROR\n                   PERFORM 2500-RUN-ERROR-TEST",
+            "supports_requirement": [
+              "REQ-113"
+            ]
+          },
+          {
+            "file": "TSTVAL00.cbl",
+            "block": "2900-WRITE-SUMMARY",
+            "code": "2900-WRITE-SUMMARY.\n           ACCEPT WS-END-TIME FROM TIME\n           COMPUTE WS-ELAPSED-TIME = WS-END-TIME - WS-START-TIME\n           MOVE WS-TOTAL-TESTS TO WS-TOTAL-OUT\n           MOVE WS-TESTS-PASSED TO WS-PASSED-OUT\n           MOVE WS-TESTS-FAILED TO WS-FAILED-OUT\n           COMPUTE WS-SUCCESS-RATE = \n               (WS-TESTS-PASSED / WS-TOTAL-TESTS) * 100",
+            "supports_requirement": [
+              "REQ-113"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the validation harness executes the selected test family and then calculates summary timing and pass/fail metrics."
+      }
+    },
+    {
+      "id": "REQ-114",
+      "requirement": "The system shall initialize the test-validation harness by opening the test input files and writing report headers before execution.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "TSTVAL00.cbl",
+            "block": "0000-MAIN",
+            "role": "start test validation run"
+          },
+          {
+            "file": "TSTVAL00.cbl",
+            "block": "1000-INITIALIZE",
+            "role": "open files and headers"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "TSTVAL00.cbl",
+            "block": "1000-INITIALIZE",
+            "code": "1000-INITIALIZE.\n           PERFORM 1100-OPEN-FILES\n           PERFORM 1200-WRITE-HEADERS\n           PERFORM 1300-INIT-METRICS.",
+            "supports_requirement": [
+              "REQ-114"
+            ]
+          },
+          {
+            "file": "TSTVAL00.cbl",
+            "block": "1100-OPEN-FILES",
+            "code": "1100-OPEN-FILES.\n           OPEN INPUT TEST-CASES\n           IF WS-TEST-STATUS NOT = '00'\n               MOVE 'ERROR OPENING TEST CASES'\n                 TO WS-ERROR-MESSAGE\n               PERFORM 9999-ERROR-HANDLER\n           END-IF",
+            "supports_requirement": [
+              "REQ-114"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the harness opens the test files, writes headers, and initializes timing metrics before test execution starts."
+      }
+    },
+    {
+      "id": "REQ-115",
+      "requirement": "The system shall provide a reusable program skeleton that initializes working storage, enters a main processing loop, and propagates a return code at termination.",
+      "ground_truth": {
+        "status": "PARTIALLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "standard-program.cbl",
+            "block": "0000-MAIN",
+            "role": "entry point skeleton"
+          },
+          {
+            "file": "standard-program.cbl",
+            "block": "2000-PROCESS",
+            "role": "placeholder main processing"
+          },
+          {
+            "file": "standard-program.cbl",
+            "block": "3000-TERMINATE",
+            "role": "move return code out"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "standard-program.cbl",
+            "block": "0000-MAIN",
+            "code": "0000-MAIN.\n           PERFORM 1000-INITIALIZE\n\n           PERFORM 2000-PROCESS\n              UNTIL END-OF-FILE\n\n           PERFORM 3000-TERMINATE\n\n           GOBACK.",
+            "supports_requirement": [
+              "REQ-115"
+            ]
+          },
+          {
+            "file": "standard-program.cbl",
+            "block": "2000-PROCESS",
+            "code": "2000-PROCESS.\n           *> Main processing logic will go here\n           SET END-OF-FILE TO TRUE\n           .",
+            "supports_requirement": [
+              "REQ-115"
+            ]
+          }
+        ],
+        "rationale": "This requirement is only partially implemented because the skeleton flow exists, but the main processing logic is still a placeholder comment and immediately ends the loop."
+      }
+    },
+    {
+      "id": "REQ-116",
+      "requirement": "The system shall open VSAM and sequential files, read and write records, and route file-status failures to the appropriate error routines.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "file-handling.cbl",
+            "block": "1000-INITIALIZE",
+            "role": "open files"
+          },
+          {
+            "file": "file-handling.cbl",
+            "block": "2100-READ-VSAM",
+            "role": "read VSAM"
+          },
+          {
+            "file": "file-handling.cbl",
+            "block": "2200-WRITE-VSAM",
+            "role": "write VSAM"
+          },
+          {
+            "file": "file-handling.cbl",
+            "block": "9000-CHECK-FILE-STATUS",
+            "role": "check file status"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "file-handling.cbl",
+            "block": "1000-INITIALIZE",
+            "code": "1000-INITIALIZE.\n           INITIALIZE WS-FILE-STATUS\n\n           OPEN INPUT  VSAM-FILE\n           OPEN INPUT  INPUT-FILE\n           OPEN OUTPUT OUTPUT-FILE\n\n           PERFORM 9000-CHECK-FILE-STATUS\n           .",
+            "supports_requirement": [
+              "REQ-116"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the template opens the files up front, performs VSAM and sequential operations, and routes non-success status through the shared checker."
+      }
+    },
+    {
+      "id": "REQ-117",
+      "requirement": "The system shall declare DB2 cursors with optional array fetching and then open the cursor when requested.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "CURSMGR.cbl",
+            "block": "P100-DECLARE-CURSOR",
+            "role": "declare cursor"
+          },
+          {
+            "file": "CURSMGR.cbl",
+            "block": "P200-OPEN-CURSOR",
+            "role": "open cursor"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "CURSMGR.cbl",
+            "block": "P100-DECLARE-CURSOR",
+            "code": "P100-DECLARE-CURSOR.\n           MOVE 0 TO CURS-RESPONSE-CODE.\n\n           IF USE-ARRAY-FETCH\n              MOVE WS-MAX-ROWS TO WS-ARRAY-SIZE\n           ELSE\n              MOVE 1 TO WS-ARRAY-SIZE\n           END-IF.\n\n           EXEC SQL DECLARE :CURS-NAME CURSOR FOR\n                :CURS-STMT",
+            "supports_requirement": [
+              "REQ-117"
+            ]
+          },
+          {
+            "file": "CURSMGR.cbl",
+            "block": "P200-OPEN-CURSOR",
+            "code": "P200-OPEN-CURSOR.\n           MOVE 0 TO WS-FETCH-COUNT.\n           MOVE 0 TO WS-ROWS-FETCHED.\n\n           EXEC SQL OPEN :CURS-NAME END-EXEC.\n\n           IF SQLCODE = 0\n              MOVE 0 TO CURS-RESPONSE-CODE\n           ELSE\n              MOVE SQLCODE TO CURS-RESPONSE-CODE",
+            "supports_requirement": [
+              "REQ-117"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the cursor manager first declares the cursor with array size selection and then opens the named cursor with SQL status handling."
+      }
+    },
+    {
+      "id": "REQ-118",
+      "requirement": "The system shall execute DB2 insert, select, cursor, update, and delete examples while checking SQL status after each operation.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "db2-handling.cbl",
+            "block": "2000-PROCESS",
+            "role": "run example DB2 operations"
+          },
+          {
+            "file": "db2-handling.cbl",
+            "block": "9000-CHECK-SQL-STATUS",
+            "role": "handle SQL errors"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "db2-handling.cbl",
+            "block": "2000-PROCESS",
+            "code": "2000-PROCESS.\n           PERFORM 2100-INSERT-EXAMPLE\n           PERFORM 2200-SELECT-EXAMPLE\n           PERFORM 2300-CURSOR-EXAMPLE\n           PERFORM 2400-UPDATE-EXAMPLE\n           PERFORM 2500-DELETE-EXAMPLE\n           .",
+            "supports_requirement": [
+              "REQ-118"
+            ]
+          },
+          {
+            "file": "db2-handling.cbl",
+            "block": "2100-INSERT-EXAMPLE",
+            "code": "2100-INSERT-EXAMPLE.\n           MOVE 'PORT00001'      TO HV-PORTFOLIO-ID\n           MOVE 'TEST PORTFOLIO' TO HV-PORTFOLIO-NAME\n\n           EXEC SQL\n               INSERT INTO PORTFOLIO",
+            "supports_requirement": [
+              "REQ-118"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the DB2 template explicitly sequences insert, select, cursor, update, and delete examples under shared SQL status checking."
+      }
+    },
+    {
+      "id": "REQ-119",
+      "requirement": "The system shall derive a final return code from warning, error, or severe counts and invoke a controlled abend when a critical failure is requested.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "error-handling.cbl",
+            "block": "8000-CHECK-FINAL-STATUS",
+            "role": "derive final return code"
+          },
+          {
+            "file": "error-handling.cbl",
+            "block": "8500-INITIATE-ABEND",
+            "role": "trigger controlled abend"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "error-handling.cbl",
+            "block": "8000-CHECK-FINAL-STATUS",
+            "code": "8000-CHECK-FINAL-STATUS.\n           IF WS-SEVERE-COUNT > ZERO\n               MOVE RC-SEVERE TO RETURN-CODE\n           ELSE\n               IF WS-ERROR-COUNT > ZERO\n                   MOVE RC-ERROR TO RETURN-CODE\n               ELSE\n                   IF WS-WARNING-COUNT > ZERO\n                       MOVE RC-WARNING TO RETURN-CODE",
+            "supports_requirement": [
+              "REQ-119"
+            ]
+          },
+          {
+            "file": "error-handling.cbl",
+            "block": "8500-INITIATE-ABEND",
+            "code": "8500-INITIATE-ABEND.\n           DISPLAY 'ABNORMAL TERMINATION INITIATED'\n           CALL 'CEE3ABD' USING RC-CRITICAL, 3\n           . ",
+            "supports_requirement": [
+              "REQ-119"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the program computes the final return code from the error counters and has an explicit controlled-abend path for critical failures."
+      }
+    },
+    {
+      "id": "REQ-120",
+      "requirement": "The system shall reconcile balances by accumulating position values and then verifying the resulting balances.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "UTLVAL00.cbl",
+            "block": "2500-CHECK-BALANCE",
+            "role": "perform balance reconciliation"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "UTLVAL00.cbl",
+            "block": "2500-CHECK-BALANCE",
+            "code": "2500-CHECK-BALANCE.\n           PERFORM 2510-ACCUMULATE-POSITIONS\n           PERFORM 2520-VERIFY-BALANCES.",
+            "supports_requirement": [
+              "REQ-120"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the balance-check path explicitly accumulates positions and then verifies the resulting totals."
+      }
+    },
+    {
+      "id": "REQ-121",
+      "requirement": "The system shall initialize a program-specific DB2 statistics row, create the session table, and seed zero counts at startup.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "DB2STAT.cbl",
+            "block": "0000-MAIN",
+            "role": "dispatch the requested statistics function"
+          },
+          {
+            "file": "DB2STAT.cbl",
+            "block": "1000-INITIALIZE",
+            "role": "initialize the statistics context and timestamps"
+          },
+          {
+            "file": "DB2STAT.cbl",
+            "block": "1100-CREATE-STATS-TABLE",
+            "role": "declare the session statistics table"
+          },
+          {
+            "file": "DB2STAT.cbl",
+            "block": "1200-INSERT-INITIAL",
+            "role": "insert the initial zeroed row"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "DB2STAT.cbl",
+            "block": "1000-INITIALIZE",
+            "code": "1000-INITIALIZE.\n    INITIALIZE WS-STATS-RECORD\n    MOVE LS-PROGRAM-ID TO WS-PROGRAM-ID\n\n    ACCEPT WS-CURRENT-TIMESTAMP FROM TIME STAMP\n    MOVE WS-CURRENT-TIMESTAMP TO WS-START-TIME\n    MOVE WS-CURRENT-TIMESTAMP TO WS-START-TIMESTAMP\n\n    PERFORM 1100-CREATE-STATS-TABLE\n    PERFORM 1200-INSERT-INITIAL\n    .",
+            "supports_requirement": [
+              "REQ-121"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the startup path initializes the program-specific statistics row, declares the session table, and inserts the zeroed baseline record."
+      }
+    },
+    {
+      "id": "REQ-122",
+      "requirement": "The system shall update the DB2 statistics row with the latest read, insert, update, delete, commit, and rollback totals supplied by the caller.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "DB2STAT.cbl",
+            "block": "0000-MAIN",
+            "role": "dispatch the requested statistics function"
+          },
+          {
+            "file": "DB2STAT.cbl",
+            "block": "2000-UPDATE-STATS",
+            "role": "copy request counters into the stats row and persist them"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "DB2STAT.cbl",
+            "block": "2000-UPDATE-STATS",
+            "code": "2000-UPDATE-STATS.\n    MOVE LS-ROWS-READ  TO WS-ROWS-READ\n    MOVE LS-ROWS-INSRT TO WS-ROWS-INSERTED\n    MOVE LS-ROWS-UPDT  TO WS-ROWS-UPDATED\n    MOVE LS-ROWS-DELT  TO WS-ROWS-DELETED\n    MOVE LS-COMMITS    TO WS-COMMITS\n    MOVE LS-ROLLBACKS  TO WS-ROLLBACKS\n\n    EXEC SQL\n        UPDATE SESSION.DBSTATS\n        SET ROWS_READ = :WS-ROWS-READ,\n            ROWS_INSERTED = :WS-ROWS-INSERTED,\n            ROWS_UPDATED = :WS-ROWS-UPDATED,\n            ROWS_DELETED = :WS-ROWS-DELETED,\n            COMMITS = :WS-COMMITS,\n            ROLLBACKS = :WS-ROLLBACKS\n    END-EXEC",
+            "supports_requirement": [
+              "REQ-122"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the update paragraph copies the caller-provided counts into working storage and persists them with a DB2 UPDATE."
+      }
+    },
+    {
+      "id": "REQ-123",
+      "requirement": "The system shall calculate elapsed and CPU time when the statistics program terminates and store those values in the DB2 statistics row.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "DB2STAT.cbl",
+            "block": "0000-MAIN",
+            "role": "dispatch the requested statistics function"
+          },
+          {
+            "file": "DB2STAT.cbl",
+            "block": "3000-TERMINATE",
+            "role": "capture the end timestamp and trigger timing calculations"
+          },
+          {
+            "file": "DB2STAT.cbl",
+            "block": "3100-CALC-TIMES",
+            "role": "derive elapsed time and CPU time"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "DB2STAT.cbl",
+            "block": "3000-TERMINATE",
+            "code": "3000-TERMINATE.\n    ACCEPT WS-CURRENT-TIMESTAMP FROM TIME STAMP\n    MOVE WS-CURRENT-TIMESTAMP TO WS-END-TIME\n\n    PERFORM 3100-CALC-TIMES\n\n    EXEC SQL\n        UPDATE SESSION.DBSTATS\n        SET END_TIME = :WS-END-TIME,\n            CPU_TIME = :WS-CPU-TIME,\n            ELAPSED_TIME = :WS-ELAPSED-TIME\n        WHERE PROGRAM_ID = :WS-PROGRAM-ID\n    END-EXEC",
+            "supports_requirement": [
+              "REQ-123"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because termination captures the end timestamp, computes timing metrics, and writes them back to the program statistics row."
+      }
+    },
+    {
+      "id": "REQ-124",
+      "requirement": "The system shall display the stored DB2 statistics for the current program on demand.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "DB2STAT.cbl",
+            "block": "0000-MAIN",
+            "role": "dispatch the requested statistics function"
+          },
+          {
+            "file": "DB2STAT.cbl",
+            "block": "4000-DISPLAY-STATS",
+            "role": "retrieve and print the stored statistics"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "DB2STAT.cbl",
+            "block": "4000-DISPLAY-STATS",
+            "code": "4000-DISPLAY-STATS.\n    EXEC SQL\n        SELECT ROWS_READ, ROWS_INSERTED,\n               ROWS_UPDATED, ROWS_DELETED,\n               COMMITS, ROLLBACKS,\n               CPU_TIME, ELAPSED_TIME\n        INTO :WS-STATS-RECORD\n        FROM SESSION.DBSTATS\n        WHERE PROGRAM_ID = :WS-PROGRAM-ID\n    END-EXEC\n\n    IF SQLCODE = 0\n        DISPLAY 'DB2 Statistics for ' WS-PROGRAM-ID\n        DISPLAY '  Records Read:    ' WS-ROWS-READ",
+            "supports_requirement": [
+              "REQ-124"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the display paragraph selects the stored statistics for the current program and prints them to the operator."
+      }
+    },
+    {
+      "id": "REQ-125",
+      "requirement": "The system shall reject unsupported DB2 statistics function codes by routing the request to the shared error handler.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "DB2STAT.cbl",
+            "block": "0000-MAIN",
+            "role": "select the requested statistics action"
+          },
+          {
+            "file": "DB2STAT.cbl",
+            "block": "9000-ERROR-ROUTINE",
+            "role": "return an error through the shared handler"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "DB2STAT.cbl",
+            "block": "0000-MAIN",
+            "code": "0000-MAIN.\n    EVALUATE TRUE\n        WHEN FUNC-INIT\n            PERFORM 1000-INITIALIZE\n        WHEN FUNC-UPDT\n            PERFORM 2000-UPDATE-STATS\n        WHEN FUNC-TERM\n            PERFORM 3000-TERMINATE\n        WHEN FUNC-DISP\n            PERFORM 4000-DISPLAY-STATS\n        WHEN OTHER\n            MOVE 'Invalid function code' TO ERR-TEXT\n            PERFORM 9000-ERROR-ROUTINE\n    END-EVALUATE",
+            "supports_requirement": [
+              "REQ-125"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because unsupported function codes are explicitly routed to the shared error routine in the main dispatcher."
+      }
+    },
+    {
+      "id": "REQ-126",
+      "requirement": "The system shall open the error log and capture a timestamp before formatting each error request.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ERRPROC.cbl",
+            "block": "0000-MAIN",
+            "role": "run the full error-processing flow"
+          },
+          {
+            "file": "ERRPROC.cbl",
+            "block": "1000-INITIALIZE",
+            "role": "initialize working areas and open the log file"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ERRPROC.cbl",
+            "block": "1000-INITIALIZE",
+            "code": "1000-INITIALIZE.\n    INITIALIZE WS-WORK-AREAS\n    ACCEPT WS-FORMATTED-TIME FROM TIME STAMP\n\n    OPEN EXTEND ERROR-LOG\n    IF WS-LOG-STATUS NOT = '00'\n        DISPLAY 'Error opening log file: ' WS-LOG-STATUS\n    END-IF\n    .",
+            "supports_requirement": [
+              "REQ-126"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the error processor opens the log file and timestamps the request before building the log record."
+      }
+    },
+    {
+      "id": "REQ-127",
+      "requirement": "The system shall map incoming error context into the standard error log layout and write the record to the log file.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ERRPROC.cbl",
+            "block": "0000-MAIN",
+            "role": "run the full error-processing flow"
+          },
+          {
+            "file": "ERRPROC.cbl",
+            "block": "2000-PROCESS-ERROR",
+            "role": "populate the standard error record from the request"
+          },
+          {
+            "file": "ERRPROC.cbl",
+            "block": "2100-WRITE-LOG",
+            "role": "write the mapped record to the log file"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ERRPROC.cbl",
+            "block": "2000-PROCESS-ERROR",
+            "code": " 2000-PROCESS-ERROR.\n*----------------------------------------------------------------*\n* Build and write error message\n*----------------------------------------------------------------*\n     MOVE WS-FORMATTED-TIME TO ERR-TIMESTAMP\n     MOVE LS-PROGRAM-ID TO ERR-PROGRAM\n     MOVE LS-CATEGORY TO ERR-CATEGORY\n     MOVE LS-ERROR-CODE TO ERR-CODE\n     MOVE LS-SEVERITY TO ERR-SEVERITY\n     MOVE LS-ERROR-TEXT TO ERR-TEXT\n     MOVE LS-ERROR-DETAILS TO ERR-DETAILS\n\n     PERFORM 2100-WRITE-LOG",
+            "supports_requirement": [
+              "REQ-127"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the error context is mapped into the standard layout and then passed to the write routine."
+      }
+    },
+    {
+      "id": "REQ-128",
+      "requirement": "The system shall display a formatted multi-line error block to the operator after the error has been logged.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ERRPROC.cbl",
+            "block": "2000-PROCESS-ERROR",
+            "role": "build the error context and invoke display logic"
+          },
+          {
+            "file": "ERRPROC.cbl",
+            "block": "2200-DISPLAY-ERROR",
+            "role": "emit the formatted error block"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ERRPROC.cbl",
+            "block": "2200-DISPLAY-ERROR",
+            "code": "2200-DISPLAY-ERROR.\n    DISPLAY '===================================================='\n    DISPLAY 'ERROR DETECTED: ' ERR-TIMESTAMP\n    DISPLAY 'PROGRAM:       ' ERR-PROGRAM\n    DISPLAY 'CATEGORY:      ' ERR-CATEGORY\n    DISPLAY 'CODE:          ' ERR-CODE\n    DISPLAY 'SEVERITY:      ' ERR-SEVERITY\n    DISPLAY 'MESSAGE:       ' ERR-TEXT\n    DISPLAY 'DETAILS:       ' ERR-DETAILS",
+            "supports_requirement": [
+              "REQ-128"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the program emits a formatted multi-line error block after the error is logged."
+      }
+    },
+    {
+      "id": "REQ-129",
+      "requirement": "The system shall close the error log when error processing terminates.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ERRPROC.cbl",
+            "block": "0000-MAIN",
+            "role": "run initialization, processing, and termination in order"
+          },
+          {
+            "file": "ERRPROC.cbl",
+            "block": "3000-TERMINATE",
+            "role": "close the log file"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ERRPROC.cbl",
+            "block": "3000-TERMINATE",
+            "code": "3000-TERMINATE.\n    CLOSE ERROR-LOG\n    .",
+            "supports_requirement": [
+              "REQ-129"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the terminate paragraph closes the sequential error log file."
+      }
+    },
+    {
+      "id": "REQ-130",
+      "requirement": "The system shall report an error-log open failure during initialization so the caller can see the file status.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ERRPROC.cbl",
+            "block": "1000-INITIALIZE",
+            "role": "open the error log and test the file status"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ERRPROC.cbl",
+            "block": "1000-INITIALIZE",
+            "code": "1000-INITIALIZE.\n    INITIALIZE WS-WORK-AREAS\n    ACCEPT WS-FORMATTED-TIME FROM TIME STAMP\n\n    OPEN EXTEND ERROR-LOG\n    IF WS-LOG-STATUS NOT = '00'\n        DISPLAY 'Error opening log file: ' WS-LOG-STATUS\n    END-IF",
+            "supports_requirement": [
+              "REQ-130"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because initialization checks the file status after OPEN EXTEND and reports any log-open failure."
+      }
+    },
+    {
+      "id": "REQ-131",
+      "requirement": "The system shall initialize the test run date, open the output file, and abort cleanly if the file cannot be opened.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTTEST.cbl",
+            "block": "0000-MAIN",
+            "role": "start the record-generation loop"
+          },
+          {
+            "file": "PORTTEST.cbl",
+            "block": "1000-INITIALIZE",
+            "role": "set the run date and open the test output file"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTTEST.cbl",
+            "block": "1000-INITIALIZE",
+            "code": "1000-INITIALIZE.\n    ACCEPT WS-CURRENT-DATE FROM DATE YYYYMMDD\n\n    OPEN OUTPUT TEST-FILE\n    IF WS-FILE-STATUS NOT = '00'\n        DISPLAY 'Error opening test file: ' WS-FILE-STATUS\n        PERFORM 3000-TERMINATE\n        GOBACK\n    END-IF\n    .",
+            "supports_requirement": [
+              "REQ-131"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the generator initializes the run date, opens the output file, and aborts if the open fails."
+      }
+    },
+    {
+      "id": "REQ-132",
+      "requirement": "The system shall repeatedly generate portfolio test records until the configured maximum record count is reached.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTTEST.cbl",
+            "block": "0000-MAIN",
+            "role": "drive the generation loop until the limit is reached"
+          },
+          {
+            "file": "PORTTEST.cbl",
+            "block": "2000-GENERATE-RECORDS",
+            "role": "build and write each synthetic record"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTTEST.cbl",
+            "block": "0000-MAIN",
+            "code": "0000-MAIN.\n    PERFORM 1000-INITIALIZE\n    PERFORM 2000-GENERATE-RECORDS\n       UNTIL WS-RECORD-COUNT >= WS-MAX-RECORDS\n    PERFORM 3000-TERMINATE\n    GOBACK\n    .",
+            "supports_requirement": [
+              "REQ-132"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the main paragraph loops until the configured record limit is reached."
+      }
+    },
+    {
+      "id": "REQ-133",
+      "requirement": "The system shall generate a unique portfolio key and account number for each synthetic test record.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTTEST.cbl",
+            "block": "2100-GENERATE-KEY",
+            "role": "construct the portfolio identifier and account number"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTTEST.cbl",
+            "block": "2100-GENERATE-KEY",
+            "code": "2100-GENERATE-KEY.\n    STRING 'PORT' WS-RECORD-COUNT\n        DELIMITED BY SIZE\n        INTO PORT-ID\n\n    MOVE FUNCTION RANDOM(WS-RECORD-COUNT) TO WS-TYPE-SUB\n    COMPUTE PORT-ACCOUNT-NO = WS-RECORD-COUNT + 1000000000\n    .",
+            "supports_requirement": [
+              "REQ-133"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the key-generation paragraph derives a unique portfolio ID and account number from the record sequence."
+      }
+    },
+    {
+      "id": "REQ-134",
+      "requirement": "The system shall synthesize client name and client type values for each generated portfolio test record.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTTEST.cbl",
+            "block": "2200-GENERATE-CLIENT-INFO",
+            "role": "derive the client-facing fields from the configured name prefix and type list"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTTEST.cbl",
+            "block": "2200-GENERATE-CLIENT-INFO",
+            "code": "2200-GENERATE-CLIENT-INFO.\n    STRING WS-NAME-PREFIX WS-RECORD-COUNT\n        DELIMITED BY SIZE\n        INTO PORT-CLIENT-NAME\n\n    MOVE WS-CLIENT-TYPES(WS-TYPE-SUB:1) TO PORT-CLIENT-TYPE\n    .",
+            "supports_requirement": [
+              "REQ-134"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the client-info paragraph builds the name from the prefix and selects a client type from the configured list."
+      }
+    },
+    {
+      "id": "REQ-135",
+      "requirement": "The system shall assign portfolio dates and a randomized active status before writing each generated record.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTTEST.cbl",
+            "block": "2300-GENERATE-PORTFOLIO-INFO",
+            "role": "populate the date and status fields for the portfolio record"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTTEST.cbl",
+            "block": "2300-GENERATE-PORTFOLIO-INFO",
+            "code": "2300-GENERATE-PORTFOLIO-INFO.\n    MOVE WS-CURRENT-DATE TO PORT-CREATE-DATE\n    MOVE WS-CURRENT-DATE TO PORT-LAST-MAINT\n\n    COMPUTE WS-STATUS-SUB = FUNCTION RANDOM * 3 + 1\n    MOVE WS-STATUS-TYPES(WS-STATUS-SUB:1) TO PORT-STATUS\n    .",
+            "supports_requirement": [
+              "REQ-135"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the portfolio-info paragraph stamps the dates and selects a randomized active status."
+      }
+    },
+    {
+      "id": "REQ-136",
+      "requirement": "The system shall generate random financial values and derive the cash balance from the portfolio total value.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTTEST.cbl",
+            "block": "2400-GENERATE-FINANCIAL-INFO",
+            "role": "set synthetic portfolio value and cash balance"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTTEST.cbl",
+            "block": "2400-GENERATE-FINANCIAL-INFO",
+            "code": "2400-GENERATE-FINANCIAL-INFO.\n    COMPUTE PORT-TOTAL-VALUE = \n        FUNCTION RANDOM * 1000000\n\n    COMPUTE PORT-CASH-BALANCE =\n        PORT-TOTAL-VALUE * .10\n    .",
+            "supports_requirement": [
+              "REQ-136"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the financial-info paragraph generates a random value and derives the cash balance from it."
+      }
+    },
+    {
+      "id": "REQ-137",
+      "requirement": "The system shall close the test file and report how many synthetic records were generated.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PORTTEST.cbl",
+            "block": "3000-TERMINATE",
+            "role": "close the test file and summarize the run"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PORTTEST.cbl",
+            "block": "3000-TERMINATE",
+            "code": "3000-TERMINATE.\n    CLOSE TEST-FILE\n\n    DISPLAY 'Records generated: ' WS-RECORD-COUNT\n    .",
+            "supports_requirement": [
+              "REQ-137"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because termination closes the test file and reports the total number of generated records."
+      }
+    }
+  ]
+}

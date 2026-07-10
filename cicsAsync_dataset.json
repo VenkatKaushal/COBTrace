@@ -1,0 +1,1332 @@
+{
+  "dataset_name": "cics_async_credit_card_application_traceability",
+  "schema_version": "3.0",
+  "requirement_count": 35,
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "requirement": "The system shall accept a customer account number from either a terminal input or a web-service container and make it available for downstream processing.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "GET-INPUT-ACCOUNT-NUMBER",
+            "role": "determine input source and populate the account number"
+          },
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "role": "continue processing after input is populated"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "GET-INPUT-ACCOUNT-NUMBER",
+            "code": "EXEC CICS ASSIGN STARTCODE( START-CODE )\nEND-EXEC.\nIF START-CODE = 'TD'\nTHEN\n  MOVE 'Y' TO IS-TERMINAL-BASED\n  EXEC CICS RECEIVE INTO     ( READ-INPUT )\n                  LENGTH     ( READ-INPUT-LENGTH )\n                  NOTRUNCATE\n                  RESP       ( COMMAND-RESP )\n                  RESP2      ( COMMAND-RESP2 )\n  END-EXEC\n\n  MOVE INPUTACCNUM TO CUST-NO-IN\n  MOVE INPUTACCNUM TO ACCOUNT-NUM",
+            "supports_requirement": [
+              "REQ-001"
+            ]
+          },
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "GET-INPUT-ACCOUNT-NUMBER",
+            "code": "ELSE\n  EXEC CICS GET CONTAINER ('ASYNCPNT' )\n                  INTO    ( ACCOUNT-NUMBER-IN )\n                  RESP    ( COMMAND-RESP )\n                  RESP2   ( COMMAND-RESP2 )\n  END-EXEC\nEND-IF",
+            "supports_requirement": [
+              "REQ-001"
+            ]
+          }
+        ],
+        "rationale": "The parent program selects terminal or container input based on the CICS start code and loads the account number into working storage for later use."
+      }
+    },
+    {
+      "id": "REQ-002",
+      "requirement": "The system shall place the input account number into a shared CICS container on a shared channel so child programs can read it.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "role": "publish input to a shared channel and container"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS PUT CONTAINER ( INPUT-CONTAINER )\n                FROM    ( ACCOUNT-NUMBER-IN )\n                CHANNEL ( MYCHANNEL)\n                RESP    ( COMMAND-RESP )\n                RESP2   ( COMMAND-RESP2 )\n           END-EXEC",
+            "supports_requirement": [
+              "REQ-002"
+            ]
+          }
+        ],
+        "rationale": "The parent program explicitly writes the input account number into INPUTCONTAINER on MYCHANNEL before invoking any child service."
+      }
+    },
+    {
+      "id": "REQ-003",
+      "requirement": "The system shall start the credit-check, address, customer-status, and customer-name services asynchronously using CICS RUN on the shared channel.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "role": "fan out to multiple asynchronous child transactions"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS RUN TRANSID      (CREDIT-CHECK-TRAN)\n              CHANNEL      (MYCHANNEL)\n              CHILD        (CREDIT-CHECK-TKN)\n           END-EXEC",
+            "supports_requirement": [
+              "REQ-003"
+            ]
+          },
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS RUN TRANSID      (GET-ADDR-TRAN)\n              CHANNEL      (MYCHANNEL)\n              CHILD        (GET-ADDR-TKN)\n           END-EXEC",
+            "supports_requirement": [
+              "REQ-003"
+            ]
+          },
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS RUN TRANSID      (CSSTATUS-TRAN)\n              CHANNEL      (MYCHANNEL)\n              CHILD        (CSSTATUS-TKN)\n           END-EXEC",
+            "supports_requirement": [
+              "REQ-003"
+            ]
+          },
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS RUN TRANSID      (GET-NAME-TRAN)\n              CHANNEL      (MYCHANNEL)\n              CHILD        (GET-NAME-TKN)\n           END-EXEC",
+            "supports_requirement": [
+              "REQ-003"
+            ]
+          }
+        ],
+        "rationale": "The parent program fires off four child transactions asynchronously, all sharing MYCHANNEL and distinct child tokens."
+      }
+    },
+    {
+      "id": "REQ-004",
+      "requirement": "The system shall wait for the credit-check child to complete before starting the database-cache update child.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "role": "wait for the credit-check child and only then launch the cache-update child"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS FETCH CHILD       (CREDIT-CHECK-TKN)\n                   CHANNEL     (CREDIT-CHECK-CHAN)\n                   COMPSTATUS  (CHILD-RETURN-STATUS)\n                   ABCODE      (CHILD-RETURN-ABCODE)\n           END-EXEC",
+            "supports_requirement": [
+              "REQ-004"
+            ]
+          },
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "code": "MOVE '.' TO TRAN5-STATUS\nPERFORM PRINT-TEXT-TO-SCREEN\n\nEXEC CICS RUN TRANSID      (DB-CACHE-TRAN)\n              CHANNEL      (MYCHANNEL)\n              CHILD        (DB-CACHE-TKN)\n           END-EXEC",
+            "supports_requirement": [
+              "REQ-004"
+            ]
+          }
+        ],
+        "rationale": "The parent explicitly fetches the credit-check child first and only then initiates the DB cache child, making the dependency order clear."
+      }
+    },
+    {
+      "id": "REQ-005",
+      "requirement": "The system shall retrieve the credit-check result from the child output container and use it in the parent flow.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "CRDTCHK.cbl",
+            "block": "MAINLINE",
+            "role": "produce the credit-check output container"
+          },
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "role": "read the credit-check result from the child container"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "CRDTCHK.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS PUT CONTAINER ( CRDTCHK-CONTAINER )\n                FROM    ( CREDIT-CHECK-RESULT )\n                RESP    ( COMMAND-RESP )\n                RESP2   ( COMMAND-RESP2 )\n           END-EXEC",
+            "supports_requirement": [
+              "REQ-005"
+            ]
+          },
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS GET CONTAINER (CRDTCHK-CONTAINER)\n                   INTO    (CREDIT-CHECK-RESULT)\n                   CHANNEL (CREDIT-CHECK-CHAN)\n                   RESP    (COMMAND-RESP)\n                   RESP2   (COMMAND-RESP2)\n           END-EXEC",
+            "supports_requirement": [
+              "REQ-005"
+            ]
+          }
+        ],
+        "rationale": "The child writes CREDIT-CHECK-RESULT to its container and the parent later reads that same container into its own working storage."
+      }
+    },
+    {
+      "id": "REQ-006",
+      "requirement": "The system shall trigger a database-cache update as a separate asynchronous child after the credit-check result is available.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "role": "launch the cache update as another asynchronous child"
+          },
+          {
+            "file": "UPDCSDB.cbl",
+            "block": "MAINLINE",
+            "role": "simulate the cache update"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS RUN TRANSID      (DB-CACHE-TRAN)\n              CHANNEL      (MYCHANNEL)\n              CHILD        (DB-CACHE-TKN)\n           END-EXEC",
+            "supports_requirement": [
+              "REQ-006"
+            ]
+          },
+          {
+            "file": "UPDCSDB.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS DELAY FOR SECONDS(3)\n           END-EXEC\n\n      * --------------------------------------------------------------\n      * Finished\n      * --------------------------------------------------------------\n           EXEC CICS RETURN\n           END-EXEC.",
+            "supports_requirement": [
+              "REQ-006"
+            ]
+          }
+        ],
+        "rationale": "The parent launches UPDCSDB asynchronously and the child program simulates the update with a delay before returning."
+      }
+    },
+    {
+      "id": "REQ-007",
+      "requirement": "The system shall retrieve the customer name from the asynchronous child output and place it in the final response data.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "role": "read the customer name from the GETNAME child"
+          },
+          {
+            "file": "GETNAME.cbl",
+            "block": "MAINLINE",
+            "role": "populate and return the customer name"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS GET CONTAINER (GETNAME-CONTAINER)\n                   CHANNEL (GET-NAME-CHAN)\n                   INTO    (CUSTOMER-NAME)\n                   RESP    (COMMAND-RESP)\n                   RESP2   (COMMAND-RESP2)\n           END-EXEC",
+            "supports_requirement": [
+              "REQ-007"
+            ]
+          },
+          {
+            "file": "GETNAME.cbl",
+            "block": "MAINLINE",
+            "code": "IF ACCOUNT-NUMBER-IN = '0001'\n           THEN\n             MOVE 'PRADEEP GOHIL' TO CUSTOMER-NAME\n           ELSE\n             MOVE 'JOE BLOGS' TO CUSTOMER-NAME\n           END-IF\n\n      * Pass the result back to parent\n           EXEC CICS PUT CONTAINER ( GETNAME-CONTAINER )\n                           FROM    ( CUSTOMER-NAME )",
+            "supports_requirement": [
+              "REQ-007"
+            ]
+          }
+        ],
+        "rationale": "GETNAME sets CUSTOMER-NAME based on the account number and the parent reads that container into its response structure."
+      }
+    },
+    {
+      "id": "REQ-008",
+      "requirement": "The system shall retrieve the customer's postal address and postcode from the address child output.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "role": "read the address and postcode from the GETADDR child"
+          },
+          {
+            "file": "GETADDR.cbl",
+            "block": "MAINLINE",
+            "role": "populate and return address data"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS GET CONTAINER (GETADDR-CONTAINER)\n                   CHANNEL (GET-ADDR-CHAN)\n                   INTO    (CUSTOMER-ADDRESS)\n                   RESP    (COMMAND-RESP)\n                   RESP2   (COMMAND-RESP2)\n           END-EXEC",
+            "supports_requirement": [
+              "REQ-008"
+            ]
+          },
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS GET CONTAINER (GETPOST-CONTAINER)\n                   CHANNEL (GET-ADDR-CHAN)\n                   INTO    (CUSTOMER-POSTCODE)\n                   RESP    (COMMAND-RESP)\n                   RESP2   (COMMAND-RESP2)\n           END-EXEC",
+            "supports_requirement": [
+              "REQ-008"
+            ]
+          },
+          {
+            "file": "GETADDR.cbl",
+            "block": "MAINLINE",
+            "code": "IF ACCOUNT-NUMBER-IN = '0001'\n           THEN\n             MOVE '1 HURSLEY PARK, WINCHESTER, UK' TO CUSTOMER-ADDRESS\n             MOVE 'SO21 2JN'                       TO CUSTOMER-POSTCODE\n           ELSE\n             MOVE '123 HIGH STREET, LONDON, UK'    TO CUSTOMER-ADDRESS\n             MOVE 'S14 4WG'                        TO CUSTOMER-POSTCODE\n           END-IF",
+            "supports_requirement": [
+              "REQ-008"
+            ]
+          }
+        ],
+        "rationale": "The address child fills both address fields and the parent reads both containers into its return data."
+      }
+    },
+    {
+      "id": "REQ-009",
+      "requirement": "The system shall retrieve the customer's importance value from the customer-status child output.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "role": "read the importance result from the customer-status child"
+          },
+          {
+            "file": "CSSTATS2.cbl",
+            "block": "MAINLINE",
+            "role": "produce the customer importance value"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS GET CONTAINER (CSSTATUS-CONTAINER)\n                   CHANNEL (CSSTATUS-CHAN)\n                   INTO    (CUSTOMER-IMPORTANCE)\n                   RESP    (COMMAND-RESP)\n                   RESP2   (COMMAND-RESP2)\n           END-EXEC",
+            "supports_requirement": [
+              "REQ-009"
+            ]
+          },
+          {
+            "file": "CSSTATS2.cbl",
+            "block": "MAINLINE",
+            "code": "IF ACCOUNT-NUMBER-IN = '0001'\n           THEN\n             MOVE 'VERY VIP' TO CUSTOMER-IMPORTANCE\n           ELSE\n             MOVE 'REGULAR ' TO CUSTOMER-IMPORTANCE\n           END-IF\n\n      * Pass the result back to parent\n           EXEC CICS PUT CONTAINER ( CSSTATS2-CONTAINER )\n                           FROM    ( CUSTOMER-IMPORTANCE )",
+            "supports_requirement": [
+              "REQ-009"
+            ]
+          }
+        ],
+        "rationale": "CSSTATS2 computes CUSTOMER-IMPORTANCE and returns it in GETVIPSTATUS, which the parent retrieves into its working storage."
+      }
+    },
+    {
+      "id": "REQ-010",
+      "requirement": "The system shall mark the application as successful, build the final response structure, and return it in a CICS container.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "role": "set the final result and return the complete response structure"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "code": "MOVE APPLICATION-SUCCESS TO APPLICATION-RESULT\n           MOVE APPLICATION-SUCCESS TO RESULT-TEXT\n           PERFORM PRINT-TEXT-TO-SCREEN\n\n      * Populate container for web service invocations\n           EXEC CICS PUT CONTAINER ('ASYNCPNT' )\n                           FROM    ( RETURN-DATA )\n                           RESP    ( COMMAND-RESP )\n                           RESP2   ( COMMAND-RESP2 )",
+            "supports_requirement": [
+              "REQ-010"
+            ]
+          },
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS RETURN\n           END-EXEC",
+            "supports_requirement": [
+              "REQ-010"
+            ]
+          }
+        ],
+        "rationale": "The parent copies SUCCESS into the response fields, stores RETURN-DATA into the ASYNCPNT container, and then returns control to CICS."
+      }
+    },
+    {
+      "id": "REQ-011",
+      "requirement": "The system shall show terminal progress by printing status markers for each child transaction as it is started and completed.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "role": "update terminal progress for asynchronous steps"
+          },
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "PRINT-TEXT-TO-SCREEN",
+            "role": "emit the progress line to the terminal"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "code": "MOVE '.' TO TRAN1-STATUS\n           PERFORM PRINT-TEXT-TO-SCREEN\n\n           EXEC CICS RUN TRANSID      (CREDIT-CHECK-TRAN)\n                         CHANNEL      (MYCHANNEL)\n                         CHILD        (CREDIT-CHECK-TKN)",
+            "supports_requirement": [
+              "REQ-011"
+            ]
+          },
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "code": "MOVE 'Y' TO TRAN1-STATUS\n           PERFORM PRINT-TEXT-TO-SCREEN",
+            "supports_requirement": [
+              "REQ-011"
+            ]
+          },
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "PRINT-TEXT-TO-SCREEN",
+            "code": "IF IS-TERMINAL-BASED = 'Y' THEN\n             EXEC CICS SEND TEXT FROM ( PRINT-LINE )\n                       TERMINAL WAIT\n                       FREEKB\n                       ERASE\n             END-EXEC\n           END-IF",
+            "supports_requirement": [
+              "REQ-011"
+            ]
+          }
+        ],
+        "rationale": "The parent toggles progress markers and sends the formatted PRINT-LINE only in terminal-driven execution."
+      }
+    },
+    {
+      "id": "REQ-012",
+      "requirement": "The credit-check child shall read the input account number from the shared input container before generating a result.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "CRDTCHK.cbl",
+            "block": "MAINLINE",
+            "role": "read the shared input container"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "CRDTCHK.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS GET CONTAINER ( INPUT-CONTAINER )\n                           INTO    ( ACCOUNT-NUMBER-IN )\n                           RESP    ( COMMAND-RESP )\n                           RESP2   ( COMMAND-RESP2 )\n           END-EXEC",
+            "supports_requirement": [
+              "REQ-012"
+            ]
+          }
+        ],
+        "rationale": "CRDTCHK starts by reading INPUTCONTAINER into ACCOUNT-NUMBER-IN before executing any credit-score logic."
+      }
+    },
+    {
+      "id": "REQ-013",
+      "requirement": "The credit-check child shall return a score of 998 for account 0001 and 537 for all other accounts.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "CRDTCHK.cbl",
+            "block": "MAINLINE",
+            "role": "derive the credit score from the account number"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "CRDTCHK.cbl",
+            "block": "MAINLINE",
+            "code": "IF ACCOUNT-NUMBER-IN = '0001'\n           THEN\n             MOVE '998' TO CREDIT-CHECK-RESULT\n           ELSE\n             MOVE '537' TO CREDIT-CHECK-RESULT\n           END-IF",
+            "supports_requirement": [
+              "REQ-013"
+            ]
+          }
+        ],
+        "rationale": "The scoring logic is explicit and deterministic: one special case for account 0001 and a default score for every other account."
+      }
+    },
+    {
+      "id": "REQ-014",
+      "requirement": "The credit-check child shall simulate an external service delay before returning its result container.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "CRDTCHK.cbl",
+            "block": "MAINLINE",
+            "role": "delay to simulate the service call and then return the result"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "CRDTCHK.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS DELAY FOR SECONDS(5)\n           END-EXEC\n\n      * Pass the result back to parent\n           EXEC CICS PUT CONTAINER ( CRDTCHK-CONTAINER )\n                           FROM    ( CREDIT-CHECK-RESULT )",
+            "supports_requirement": [
+              "REQ-014"
+            ]
+          }
+        ],
+        "rationale": "The child intentionally waits five seconds and then writes CREDIT-CHECK-RESULT to its output container."
+      }
+    },
+    {
+      "id": "REQ-015",
+      "requirement": "The name-retrieval child shall map the account number to a customer name and return it through its container.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "GETNAME.cbl",
+            "block": "MAINLINE",
+            "role": "resolve and return customer name"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "GETNAME.cbl",
+            "block": "MAINLINE",
+            "code": "IF ACCOUNT-NUMBER-IN = '0001'\n           THEN\n             MOVE 'PRADEEP GOHIL' TO CUSTOMER-NAME\n           ELSE\n             MOVE 'JOE BLOGS' TO CUSTOMER-NAME\n           END-IF\n\n      * Pass the result back to parent\n           EXEC CICS PUT CONTAINER ( GETNAME-CONTAINER )\n                           FROM    ( CUSTOMER-NAME )",
+            "supports_requirement": [
+              "REQ-015"
+            ]
+          }
+        ],
+        "rationale": "GETNAME deterministically selects one of two names and returns the selected value in GETNAMECONTAINER."
+      }
+    },
+    {
+      "id": "REQ-016",
+      "requirement": "The address-retrieval child shall map the account number to a postal address and postcode, pause briefly, and return both values.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "GETADDR.cbl",
+            "block": "MAINLINE",
+            "role": "resolve and return address details"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "GETADDR.cbl",
+            "block": "MAINLINE",
+            "code": "IF ACCOUNT-NUMBER-IN = '0001'\n           THEN\n             MOVE '1 HURSLEY PARK, WINCHESTER, UK' TO CUSTOMER-ADDRESS\n             MOVE 'SO21 2JN'                       TO CUSTOMER-POSTCODE\n           ELSE\n             MOVE '123 HIGH STREET, LONDON, UK'    TO CUSTOMER-ADDRESS\n             MOVE 'S14 4WG'                        TO CUSTOMER-POSTCODE\n           END-IF",
+            "supports_requirement": [
+              "REQ-016"
+            ]
+          },
+          {
+            "file": "GETADDR.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS DELAY FOR SECONDS(5)\n           END-EXEC\n\n      * Pass the result back to parent\n           EXEC CICS PUT CONTAINER ( GETADDR-CONTAINER )\n                           FROM    ( CUSTOMER-ADDRESS )",
+            "supports_requirement": [
+              "REQ-016"
+            ]
+          },
+          {
+            "file": "GETADDR.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS PUT CONTAINER ( GETPOST-CONTAINER )\n                           FROM    ( CUSTOMER-POSTCODE )\n                           RESP    ( COMMAND-RESP )\n                           RESP2   ( COMMAND-RESP2 )",
+            "supports_requirement": [
+              "REQ-016"
+            ]
+          }
+        ],
+        "rationale": "GETADDR computes both address fields from the account number, simulates latency, and returns the two container values separately."
+      }
+    },
+    {
+      "id": "REQ-017",
+      "requirement": "The sequential status child shall call policy retrieval and spending retrieval in order before returning the importance result.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "CSSTATUS.cbl",
+            "block": "MAINLINE",
+            "role": "retrieve input, call child programs sequentially, calculate importance, return output"
+          },
+          {
+            "file": "GETPOL.cbl",
+            "block": "MAINLINE",
+            "role": "simulate policy retrieval"
+          },
+          {
+            "file": "GETSPND.cbl",
+            "block": "MAINLINE",
+            "role": "simulate spending retrieval"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "CSSTATUS.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS LINK PROGRAM(GETPOL)\n           END-EXEC\n\n           EXEC CICS LINK PROGRAM(GETSPND)\n           END-EXEC\n\n\n      * Algorithm to \"calculate\" status\n           IF ACCOUNT-NUMBER-IN = '0001'\n           THEN\n             MOVE 'VERY VIP' TO CUSTOMER-IMPORTANCE",
+            "supports_requirement": [
+              "REQ-017"
+            ]
+          },
+          {
+            "file": "CSSTATUS.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS PUT CONTAINER ( CSSTATUS-CONTAINER )\n                           FROM    ( CUSTOMER-IMPORTANCE )\n                           RESP    ( COMMAND-RESP )\n                           RESP2   ( COMMAND-RESP2 )",
+            "supports_requirement": [
+              "REQ-017"
+            ]
+          }
+        ],
+        "rationale": "CSSTATUS uses synchronous CICS LINK calls to GETPOL and GETSPND, then calculates and returns CUSTOMER-IMPORTANCE."
+      }
+    },
+    {
+      "id": "REQ-018",
+      "requirement": "The asynchronous status child shall start policy retrieval and spending retrieval as separate asynchronous child tasks before calculating and returning the importance value.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "CSSTATS2.cbl",
+            "block": "MAINLINE",
+            "role": "retrieve input, launch asynchronous child tasks, calculate importance, return output"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "CSSTATS2.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS RUN TRANSID      (GET-POLICY-TRAN)\n                         CHILD        (GET-POLICY-TKN)\n           END-EXEC\n           EXEC CICS RUN TRANSID      (GET-SPEND-TRAN)\n                         CHILD        (GET-SPEND-TKN)\n           END-EXEC",
+            "supports_requirement": [
+              "REQ-018"
+            ]
+          },
+          {
+            "file": "CSSTATS2.cbl",
+            "block": "MAINLINE",
+            "code": "IF ACCOUNT-NUMBER-IN = '0001'\n           THEN\n             MOVE 'VERY VIP' TO CUSTOMER-IMPORTANCE\n           ELSE\n             MOVE 'REGULAR ' TO CUSTOMER-IMPORTANCE\n           END-IF",
+            "supports_requirement": [
+              "REQ-018"
+            ]
+          },
+          {
+            "file": "CSSTATS2.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS PUT CONTAINER ( CSSTATS2-CONTAINER )\n                           FROM    ( CUSTOMER-IMPORTANCE )\n                           RESP    ( COMMAND-RESP )\n                           RESP2   ( COMMAND-RESP2 )",
+            "supports_requirement": [
+              "REQ-018"
+            ]
+          }
+        ],
+        "rationale": "CSSTATS2 launches GETPOL and GETSPND with child tokens, does not wait for their returned data, then computes and returns CUSTOMER-IMPORTANCE."
+      }
+    },
+    {
+      "id": "REQ-019",
+      "requirement": "The policy-retrieval child shall simulate work by delaying for two seconds before returning.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "GETPOL.cbl",
+            "block": "MAINLINE",
+            "role": "simulate policy retrieval latency and return"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "GETPOL.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS DELAY FOR SECONDS(2)\n           END-EXEC\n\n      * --------------------------------------------------------------\n      * Finished\n      * --------------------------------------------------------------\n           EXEC CICS RETURN\n           END-EXEC.",
+            "supports_requirement": [
+              "REQ-019"
+            ]
+          }
+        ],
+        "rationale": "GETPOL contains no business data movement; it only waits for two seconds and returns to its caller."
+      }
+    },
+    {
+      "id": "REQ-020",
+      "requirement": "The spending-retrieval child shall simulate work by delaying for two seconds before returning.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "GETSPND.cbl",
+            "block": "MAINLINE",
+            "role": "simulate spending retrieval latency and return"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "GETSPND.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS DELAY FOR SECONDS(2)\n           END-EXEC\n\n      * --------------------------------------------------------------\n      * Finished\n      * --------------------------------------------------------------\n           EXEC CICS RETURN\n           END-EXEC.",
+            "supports_requirement": [
+              "REQ-020"
+            ]
+          }
+        ],
+        "rationale": "GETSPND mirrors GETPOL: it only simulates elapsed time and then returns immediately."
+      }
+    },
+    {
+      "id": "REQ-021",
+      "requirement": "The database-cache child shall simulate a three-second cache update before returning control to the parent.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "UPDCSDB.cbl",
+            "block": "MAINLINE",
+            "role": "simulate the database-cache update and return"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "UPDCSDB.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS DELAY FOR SECONDS(3)\n           END-EXEC\n\n      * --------------------------------------------------------------\n      * Finished\n      * --------------------------------------------------------------\n           EXEC CICS RETURN\n           END-EXEC.",
+            "supports_requirement": [
+              "REQ-021"
+            ]
+          }
+        ],
+        "rationale": "UPDCSDB is a one-way child task that models cache update time with a three-second delay."
+      }
+    },
+    {
+      "id": "REQ-022",
+      "requirement": "The sequential parent shall accept the input account number from either terminal input or a web-service container and then create a shared input container.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "SEQPNT.cbl",
+            "block": "GET-INPUT-ACCOUNT-NUMBER",
+            "role": "determine input source and populate the account number"
+          },
+          {
+            "file": "SEQPNT.cbl",
+            "block": "MAINLINE",
+            "role": "place the account number into the shared container"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "SEQPNT.cbl",
+            "block": "GET-INPUT-ACCOUNT-NUMBER",
+            "code": "EXEC CICS ASSIGN STARTCODE( START-CODE )\n           END-EXEC\n           IF START-CODE = 'TD'\n           THEN\n             MOVE 'Y' TO IS-TERMINAL-BASED\n             EXEC CICS RECEIVE INTO     ( READ-INPUT )\n                             LENGTH     ( READ-INPUT-LENGTH )\n                             NOTRUNCATE\n                             RESP       ( COMMAND-RESP )\n                             RESP2      ( COMMAND-RESP2 )\n             END-EXEC",
+            "supports_requirement": [
+              "REQ-022"
+            ]
+          },
+          {
+            "file": "SEQPNT.cbl",
+            "block": "GET-INPUT-ACCOUNT-NUMBER",
+            "code": "ELSE\n             EXEC CICS GET CONTAINER ('SEQPNT' )\n                             INTO    ( ACCOUNT-NUMBER-IN )\n                             RESP    ( COMMAND-RESP )\n                             RESP2   ( COMMAND-RESP2 )\n             END-EXEC\n           END-IF",
+            "supports_requirement": [
+              "REQ-022"
+            ]
+          },
+          {
+            "file": "SEQPNT.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS PUT CONTAINER ( INPUT-CONTAINER )\n                           FROM    ( ACCOUNT-NUMBER-IN )\n                           CHANNEL ( MYCHANNEL)\n                           RESP    ( COMMAND-RESP )\n                           RESP2   ( COMMAND-RESP2 )\n           END-EXEC",
+            "supports_requirement": [
+              "REQ-022"
+            ]
+          }
+        ],
+        "rationale": "SEQPNT supports the same two input modes as the asynchronous parent and publishes the account number to a shared channel container."
+      }
+    },
+    {
+      "id": "REQ-023",
+      "requirement": "The sequential parent shall invoke the child services in a fixed order, waiting for each child to finish before continuing to the next step.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "SEQPNT.cbl",
+            "block": "MAINLINE",
+            "role": "execute the child services in sequence"
+          },
+          {
+            "file": "CRDTCHK.cbl",
+            "block": "MAINLINE",
+            "role": "produce the credit-check result"
+          },
+          {
+            "file": "GETNAME.cbl",
+            "block": "MAINLINE",
+            "role": "produce the customer name"
+          },
+          {
+            "file": "GETADDR.cbl",
+            "block": "MAINLINE",
+            "role": "produce the address and postcode"
+          },
+          {
+            "file": "CSSTATUS.cbl",
+            "block": "MAINLINE",
+            "role": "produce the customer importance"
+          },
+          {
+            "file": "UPDCSDB.cbl",
+            "block": "MAINLINE",
+            "role": "perform the cache update"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "SEQPNT.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS LINK PROGRAM ( CREDIT-CHECK )\n                          CHANNEL ( MYCHANNEL )\n                          RESP    ( COMMAND-RESP )\n                          RESP2   ( COMMAND-RESP2 )\n           END-EXEC\n\n           EXEC CICS GET CONTAINER (CRDTCHK-CONTAINER)\n                           INTO    (CREDIT-CHECK-RESULT)",
+            "supports_requirement": [
+              "REQ-023"
+            ]
+          },
+          {
+            "file": "SEQPNT.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS LINK PROGRAM ( GET-NAME )\n                          CHANNEL ( MYCHANNEL )\n                          RESP    ( COMMAND-RESP )\n                          RESP2   ( COMMAND-RESP2 )\n           END-EXEC",
+            "supports_requirement": [
+              "REQ-023"
+            ]
+          },
+          {
+            "file": "SEQPNT.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS LINK PROGRAM ( GET-ADDR )\n                          CHANNEL ( MYCHANNEL )\n                          RESP    ( COMMAND-RESP )\n                          RESP2   ( COMMAND-RESP2 )\n           END-EXEC",
+            "supports_requirement": [
+              "REQ-023"
+            ]
+          },
+          {
+            "file": "SEQPNT.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS LINK PROGRAM ( CSSTATUS )\n                          CHANNEL ( MYCHANNEL )\n                          RESP    ( COMMAND-RESP )\n                          RESP2   ( COMMAND-RESP2 )\n           END-EXEC",
+            "supports_requirement": [
+              "REQ-023"
+            ]
+          },
+          {
+            "file": "SEQPNT.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS LINK PROGRAM ( DB-CACHE )\n                          CHANNEL ( MYCHANNEL )\n                          RESP    ( COMMAND-RESP )\n                          RESP2   ( COMMAND-RESP2 )\n           END-EXEC",
+            "supports_requirement": [
+              "REQ-023"
+            ]
+          }
+        ],
+        "rationale": "The sequential parent uses CICS LINK and retrieves each output before moving on, so the flow is strictly ordered rather than parallel."
+      }
+    },
+    {
+      "id": "REQ-024",
+      "requirement": "The sequential parent shall assemble the final application result, place it into a return container, and return control to CICS.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "SEQPNT.cbl",
+            "block": "MAINLINE",
+            "role": "set the final result and return the complete response structure"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "SEQPNT.cbl",
+            "block": "MAINLINE",
+            "code": "MOVE APPLICATION-SUCCESS TO APPLICATION-RESULT\n           MOVE APPLICATION-SUCCESS TO RESULT-TEXT\n           PERFORM PRINT-TEXT-TO-SCREEN\n\n      * Populate container for web service invocations\n           EXEC CICS PUT CONTAINER ('SEQPNT' )\n                           FROM    ( RETURN-DATA )\n                           RESP    ( COMMAND-RESP )\n                           RESP2   ( COMMAND-RESP2 )",
+            "supports_requirement": [
+              "REQ-024"
+            ]
+          },
+          {
+            "file": "SEQPNT.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS RETURN\n           END-EXEC",
+            "supports_requirement": [
+              "REQ-024"
+            ]
+          }
+        ],
+        "rationale": "SEQPNT mirrors the async parent at the end: it sets SUCCESS, writes RETURN-DATA to the SEQPNT container, and returns."
+      }
+    },
+    {
+      "id": "REQ-025",
+      "requirement": "The system shall provide both asynchronous and sequential orchestration paths for the same credit-card application workflow, producing a completed response in either mode.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "role": "async orchestration path"
+          },
+          {
+            "file": "SEQPNT.cbl",
+            "block": "MAINLINE",
+            "role": "sequential orchestration path"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS RUN TRANSID      (CREDIT-CHECK-TRAN)\n                         CHANNEL      (MYCHANNEL)\n                         CHILD        (CREDIT-CHECK-TKN)\n           END-EXEC\n\n      * Finished\n      * Summarize the credit card application\n\n           MOVE APPLICATION-SUCCESS TO APPLICATION-RESULT\n           MOVE APPLICATION-SUCCESS TO RESULT-TEXT",
+            "supports_requirement": [
+              "REQ-025"
+            ]
+          },
+          {
+            "file": "SEQPNT.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS LINK PROGRAM ( CREDIT-CHECK )\n                          CHANNEL ( MYCHANNEL )\n                          RESP    ( COMMAND-RESP )\n                          RESP2   ( COMMAND-RESP2 )\n           END-EXEC\n\n      * Finished\n      * Summarize the credit card application\n\n           MOVE APPLICATION-SUCCESS TO APPLICATION-RESULT\n           MOVE APPLICATION-SUCCESS TO RESULT-TEXT",
+            "supports_requirement": [
+              "REQ-025"
+            ]
+          }
+        ],
+        "rationale": "Both parent programs implement the same business outcome but differ in orchestration style: ASYNCPNT fans out with RUN/FETCH while SEQPNT uses LINK and waits at each step."
+      }
+    },
+    {
+      "id": "REQ-026",
+      "requirement": "The sequential status flow shall determine customer importance using the customer's policy holdings and yearly spend rather than account number alone.",
+      "ground_truth": {
+        "status": "PARTIALLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "CSSTATUS.cbl",
+            "block": "MAINLINE",
+            "role": "retrieve input and invoke policy/spend lookups"
+          },
+          {
+            "file": "GETPOL.cbl",
+            "block": "MAINLINE",
+            "role": "simulate policy retrieval"
+          },
+          {
+            "file": "GETSPND.cbl",
+            "block": "MAINLINE",
+            "role": "simulate spend retrieval"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "CSSTATUS.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS LINK PROGRAM(GETPOL)\nEND-EXEC\n\nEXEC CICS LINK PROGRAM(GETSPND)\nEND-EXEC",
+            "supports_requirement": [
+              "REQ-026"
+            ]
+          },
+          {
+            "file": "CSSTATUS.cbl",
+            "block": "MAINLINE",
+            "code": "IF ACCOUNT-NUMBER-IN = '0001'\nTHEN\n  MOVE 'VERY VIP' TO CUSTOMER-IMPORTANCE\nELSE\n  MOVE 'REGULAR ' TO CUSTOMER-IMPORTANCE\nEND-IF",
+            "supports_requirement": [
+              "REQ-026"
+            ]
+          },
+          {
+            "file": "CSSTATUS.cbl",
+            "block": "MAINLINE",
+            "code": "* The status is calculated by the existing custom of the client\n* and the amount they spent with us in the previous year",
+            "supports_requirement": [
+              "REQ-026"
+            ]
+          }
+        ],
+        "rationale": "The flow invokes the policy and spend programs, but the actual importance decision is based only on the account number. The intended metric-based calculation is therefore only partially implemented."
+      }
+    },
+    {
+      "id": "REQ-027",
+      "requirement": "The asynchronous status flow shall determine customer importance from the results of the policy and spend lookups after starting those lookups asynchronously.",
+      "ground_truth": {
+        "status": "PARTIALLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "CSSTATS2.cbl",
+            "block": "MAINLINE",
+            "role": "start policy and spend lookup tasks asynchronously"
+          },
+          {
+            "file": "GETPOL.cbl",
+            "block": "MAINLINE",
+            "role": "simulate policy retrieval"
+          },
+          {
+            "file": "GETSPND.cbl",
+            "block": "MAINLINE",
+            "role": "simulate spend retrieval"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "CSSTATS2.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS RUN TRANSID      (GET-POLICY-TRAN)\n              CHILD        (GET-POLICY-TKN)\nEND-EXEC\nEXEC CICS RUN TRANSID      (GET-SPEND-TRAN)\n              CHILD        (GET-SPEND-TKN)\nEND-EXEC",
+            "supports_requirement": [
+              "REQ-027"
+            ]
+          },
+          {
+            "file": "CSSTATS2.cbl",
+            "block": "MAINLINE",
+            "code": "IF ACCOUNT-NUMBER-IN = '0001'\nTHEN\n  MOVE 'VERY VIP' TO CUSTOMER-IMPORTANCE\nELSE\n  MOVE 'REGULAR ' TO CUSTOMER-IMPORTANCE\nEND-IF",
+            "supports_requirement": [
+              "REQ-027"
+            ]
+          }
+        ],
+        "rationale": "The async flow does launch the lookup tasks, but it never retrieves or uses their outputs when calculating importance, so the intended behavior is only partially implemented."
+      }
+    },
+    {
+      "id": "REQ-028",
+      "requirement": "The parent asynchronous flow shall confirm the database-cache child completed successfully before finalizing the application result.",
+      "ground_truth": {
+        "status": "PARTIALLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "role": "wait for database-cache child completion"
+          },
+          {
+            "file": "UPDCSDB.cbl",
+            "block": "MAINLINE",
+            "role": "simulate database-cache update"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS FETCH CHILD       (DB-CACHE-TKN)\n               COMPSTATUS  (CHILD-RETURN-STATUS)\n               ABCODE      (CHILD-RETURN-ABCODE)\nEND-EXEC",
+            "supports_requirement": [
+              "REQ-028"
+            ]
+          },
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "code": "* Would normally check completion status of the child here",
+            "supports_requirement": [
+              "REQ-028"
+            ]
+          },
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "code": "MOVE 'Y' TO TRAN5-STATUS\nPERFORM PRINT-TEXT-TO-SCREEN\n\n* --------------------------------------------------------------\n* Finished",
+            "supports_requirement": [
+              "REQ-028"
+            ]
+          }
+        ],
+        "rationale": "The parent does fetch the child completion metadata, but it never evaluates that metadata before continuing. The completion-check behavior is present only as an incomplete stub."
+      }
+    },
+    {
+      "id": "REQ-029",
+      "requirement": "The system shall reject malformed or non-four-digit account numbers before dispatching any child service.",
+      "ground_truth": {
+        "status": "NOT_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "GET-INPUT-ACCOUNT-NUMBER",
+            "role": "obtain account number"
+          },
+          {
+            "file": "SEQPNT.cbl",
+            "block": "GET-INPUT-ACCOUNT-NUMBER",
+            "role": "obtain account number for sequential flow"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "GET-INPUT-ACCOUNT-NUMBER",
+            "code": "EXEC CICS RECEIVE INTO     ( READ-INPUT )\n                LENGTH     ( READ-INPUT-LENGTH )\n                NOTRUNCATE\n                RESP       ( COMMAND-RESP )\n                RESP2      ( COMMAND-RESP2 )\nEND-EXEC\n\nMOVE INPUTACCNUM TO CUST-NO-IN",
+            "supports_requirement": [
+              "REQ-029"
+            ]
+          },
+          {
+            "file": "SEQPNT.cbl",
+            "block": "GET-INPUT-ACCOUNT-NUMBER",
+            "code": "EXEC CICS GET CONTAINER ('SEQPNT' )\n                INTO    ( ACCOUNT-NUMBER-IN )\n                RESP    ( COMMAND-RESP )\n                RESP2   ( COMMAND-RESP2 )\nEND-EXEC",
+            "supports_requirement": [
+              "REQ-029"
+            ]
+          }
+        ],
+        "rationale": "The input is accepted and forwarded directly, but there is no validation branch that checks format, length, or content before the workflow starts."
+      }
+    },
+    {
+      "id": "REQ-030",
+      "requirement": "The system shall detect and handle CICS command failures for container operations and child invocation calls.",
+      "ground_truth": {
+        "status": "NOT_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "role": "issue CICS commands without error handling"
+          },
+          {
+            "file": "SEQPNT.cbl",
+            "block": "MAINLINE",
+            "role": "issue CICS commands without error handling"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "header comments",
+            "code": "* FOR SIMPLICITY OF EXPLANATION, ALL ERROR HANDLING IS REMOVED.\n* ALL COMMANDS ARE EXPECTED TO SUCCESSFULLY EXECUTE. THIS IS NOT\n* INTENDED AS A GUIDE FOR BEST PRACTICE!",
+            "supports_requirement": [
+              "REQ-030"
+            ]
+          },
+          {
+            "file": "SEQPNT.cbl",
+            "block": "header comments",
+            "code": "* FOR SIMPLICITY OF EXPLANATION, ALL ERROR HANDLING IS REMOVED.\n* ALL COMMANDS ARE EXPECTED TO SUCCESSFULLY EXECUTE. THIS IS NOT\n* INTENDED AS A GUIDE FOR BEST PRACTICE!",
+            "supports_requirement": [
+              "REQ-030"
+            ]
+          }
+        ],
+        "rationale": "The code explicitly states that error handling was removed, and the command response fields are never used to branch to recovery logic."
+      }
+    },
+    {
+      "id": "REQ-031",
+      "requirement": "The system shall set the final application result to FAILED when the workflow does not complete successfully.",
+      "ground_truth": {
+        "status": "NOT_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "role": "finalize response"
+          },
+          {
+            "file": "SEQPNT.cbl",
+            "block": "MAINLINE",
+            "role": "finalize response"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "code": "MOVE APPLICATION-SUCCESS TO APPLICATION-RESULT\nMOVE APPLICATION-SUCCESS TO RESULT-TEXT",
+            "supports_requirement": [
+              "REQ-031"
+            ]
+          },
+          {
+            "file": "SEQPNT.cbl",
+            "block": "MAINLINE",
+            "code": "MOVE APPLICATION-SUCCESS TO APPLICATION-RESULT\nMOVE APPLICATION-SUCCESS TO RESULT-TEXT",
+            "supports_requirement": [
+              "REQ-031"
+            ]
+          },
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "WORKING-STORAGE",
+            "code": "1 APPLICATION-FAILED   PIC X(7) VALUE 'FAILED '.",
+            "supports_requirement": [
+              "REQ-031"
+            ]
+          }
+        ],
+        "rationale": "A FAILED value is declared but never used. Both parents always write SUCCESS to the final response, so a failure outcome is not implemented."
+      }
+    },
+    {
+      "id": "REQ-032",
+      "requirement": "The asynchronous parent shall branch on child completion codes before reading child output containers.",
+      "ground_truth": {
+        "status": "NOT_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "role": "fetch child completion metadata"
+          },
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "role": "read child output containers unconditionally"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS FETCH CHILD       (CREDIT-CHECK-TKN)\n               CHANNEL     (CREDIT-CHECK-CHAN)\n               COMPSTATUS  (CHILD-RETURN-STATUS)\n               ABCODE      (CHILD-RETURN-ABCODE)\nEND-EXEC",
+            "supports_requirement": [
+              "REQ-032"
+            ]
+          },
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "code": "EXEC CICS GET CONTAINER (CRDTCHK-CONTAINER)\n                INTO    (CREDIT-CHECK-RESULT)\n                CHANNEL (CREDIT-CHECK-CHAN)",
+            "supports_requirement": [
+              "REQ-032"
+            ]
+          }
+        ],
+        "rationale": "The child status and abend code are captured, but there is no EVALUATE or IF to branch on them before container reads continue."
+      }
+    },
+    {
+      "id": "REQ-033",
+      "requirement": "The credit-check child shall call an external credit service and consume a real response instead of returning a hard-coded score.",
+      "ground_truth": {
+        "status": "NOT_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "CRDTCHK.cbl",
+            "block": "MAINLINE",
+            "role": "generate credit-check result"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "CRDTCHK.cbl",
+            "block": "MAINLINE",
+            "code": "IF ACCOUNT-NUMBER-IN = '0001'\nTHEN\n  MOVE '998' TO CREDIT-CHECK-RESULT\nELSE\n  MOVE '537' TO CREDIT-CHECK-RESULT\nEND-IF",
+            "supports_requirement": [
+              "REQ-033"
+            ]
+          },
+          {
+            "file": "CRDTCHK.cbl",
+            "block": "header comments",
+            "code": "* \"Call\" the credit check service\n* This example executes a 5 second delay to simulate a credit check being made via a web service to an external service provider.",
+            "supports_requirement": [
+              "REQ-033"
+            ]
+          }
+        ],
+        "rationale": "The external service is only simulated. The program chooses between fixed scores and never consumes a real service response."
+      }
+    },
+    {
+      "id": "REQ-034",
+      "requirement": "The address child shall verify the customer's address through an external service before returning the address and postcode.",
+      "ground_truth": {
+        "status": "NOT_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "GETADDR.cbl",
+            "block": "MAINLINE",
+            "role": "derive address values"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "GETADDR.cbl",
+            "block": "MAINLINE",
+            "code": "IF ACCOUNT-NUMBER-IN = '0001'\nTHEN\n  MOVE '1 HURSLEY PARK, WINCHESTER, UK' TO CUSTOMER-ADDRESS\n  MOVE 'SO21 2JN'                       TO CUSTOMER-POSTCODE\nELSE\n  MOVE '123 HIGH STREET, LONDON, UK'    TO CUSTOMER-ADDRESS\n  MOVE 'S14 4WG'                        TO CUSTOMER-POSTCODE\nEND-IF",
+            "supports_requirement": [
+              "REQ-034"
+            ]
+          },
+          {
+            "file": "GETADDR.cbl",
+            "block": "header comments",
+            "code": "* \"Call\" the credit check service\n* Symbolic delay to cover\n* the time it takes to call external services to validate and standadise the address",
+            "supports_requirement": [
+              "REQ-034"
+            ]
+          }
+        ],
+        "rationale": "The program returns hard-coded addresses and postcodes after a delay. No external verification call exists."
+      }
+    },
+    {
+      "id": "REQ-035",
+      "requirement": "The application shall expose a distinct failure response payload when processing cannot complete successfully.",
+      "ground_truth": {
+        "status": "NOT_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "role": "build final response"
+          },
+          {
+            "file": "SEQPNT.cbl",
+            "block": "MAINLINE",
+            "role": "build final response"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ASYNCPNT.cbl",
+            "block": "MAINLINE",
+            "code": "MOVE APPLICATION-SUCCESS TO APPLICATION-RESULT\nMOVE APPLICATION-SUCCESS TO RESULT-TEXT\nPERFORM PRINT-TEXT-TO-SCREEN\n\nEXEC CICS PUT CONTAINER ('ASYNCPNT' )\n                FROM    ( RETURN-DATA )",
+            "supports_requirement": [
+              "REQ-035"
+            ]
+          },
+          {
+            "file": "SEQPNT.cbl",
+            "block": "MAINLINE",
+            "code": "MOVE APPLICATION-SUCCESS TO APPLICATION-RESULT\nMOVE APPLICATION-SUCCESS TO RESULT-TEXT\nPERFORM PRINT-TEXT-TO-SCREEN\n\nEXEC CICS PUT CONTAINER ('SEQPNT' )\n                FROM    ( RETURN-DATA )",
+            "supports_requirement": [
+              "REQ-035"
+            ]
+          }
+        ],
+        "rationale": "Both parent programs always return the same success-shaped payload. There is no alternate failure payload or container path."
+      }
+    }
+  ]
+}

@@ -1,0 +1,3814 @@
+{
+  "dataset_name": "EnterpriseCOBOLv6.3-Traceability-Batch1",
+  "schema_version": "3.0",
+  "requirement_count": 30,
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "requirement": "The system shall validate present value, annual interest rate, and term inputs before calculating and displaying the future value of the investment.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "FFGP.cbl",
+            "block": "display-title-screen",
+            "role": "introduce the calculator and usage rules"
+          },
+          {
+            "file": "FFGP.cbl",
+            "block": "present-value-data-entry",
+            "role": "validate and capture present value"
+          },
+          {
+            "file": "FFGP.cbl",
+            "block": "interest-rate-data-entry",
+            "role": "validate and capture annual interest"
+          },
+          {
+            "file": "FFGP.cbl",
+            "block": "term-data-entry",
+            "role": "validate and capture investment term"
+          },
+          {
+            "file": "FFGP.cbl",
+            "block": "calculate-it",
+            "role": "compute future value and display the result"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "FFGP.cbl",
+            "block": "present-value-data-entry",
+            "code": "           display \"Enter present value: \" with no advancing\n           accept pv-in\n\n      * Did the user enter a valid numeric value?\n           if function test-numval(pv-in) IS NOT EQUAL ZERO then\n              display \"Present Value\" not-numeric\n              display spaces",
+            "supports_requirement": [
+              "REQ-001"
+            ]
+          },
+          {
+            "file": "FFGP.cbl",
+            "block": "calculate-it",
+            "code": "           compute denominator = (1 + annual-interest) **\n                   annual-term\n\n           multiply present-value by denominator giving future-value\n                    rounded\n\n           move future-value to fv-out",
+            "supports_requirement": [
+              "REQ-001"
+            ]
+          }
+        ],
+        "rationale": "The entry paragraphs reject nonnumeric values and enforce valid ranges, then the calculation paragraph applies the future value formula and displays the computed investment value."
+      }
+    },
+    {
+      "id": "REQ-002",
+      "requirement": "The system shall terminate the program when the user enters zero for any required parameter.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "FFGP.cbl",
+            "block": "present-value-data-entry",
+            "role": "end the program when present value is zero"
+          },
+          {
+            "file": "FFGP.cbl",
+            "block": "interest-rate-data-entry",
+            "role": "end the program when interest rate is zero"
+          },
+          {
+            "file": "FFGP.cbl",
+            "block": "term-data-entry",
+            "role": "end the program when term is zero"
+          },
+          {
+            "file": "FFGP.cbl",
+            "block": "end-program",
+            "role": "display shutdown banner and stop run"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "FFGP.cbl",
+            "block": "present-value-data-entry",
+            "code": "           if present-value IS EQUAL ZERO then\n              go to end-program\n           end-if",
+            "supports_requirement": [
+              "REQ-002"
+            ]
+          },
+          {
+            "file": "FFGP.cbl",
+            "block": "end-program",
+            "code": "       end-program.\n           display spaces\n           display \"***** FUTURE VALUE CALCULATOR UTILITY ENDS *****\"\n           display spaces\n           stop run.",
+            "supports_requirement": [
+              "REQ-002"
+            ]
+          }
+        ],
+        "rationale": "Each input paragraph checks for zero and branches directly to the end-program paragraph, which prints the end banner and stops execution."
+      }
+    },
+    {
+      "id": "REQ-003",
+      "requirement": "The system shall count from 1 to 100 and replace multiples of 3, 5, or both with Fizz, Buzz, or FizzBuzz.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "FIZZBUZZ.cbl",
+            "block": "100-MAIN-PARA",
+            "role": "iterate through the full number range and choose output text"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "FIZZBUZZ.cbl",
+            "block": "100-MAIN-PARA",
+            "code": "       100-MAIN-PARA.\n           PERFORM VARYING COUNTER FROM 1 BY 1\n                   UNTIL COUNTER IS EQUAL TO 101\n\n                   MOVE ALL SPACES TO NONSENSE\n\n                   EVALUATE TRUE\n                   WHEN (FUNCTION MOD(COUNTER, 3) IS EQUAL TO ZERO\n                    AND  FUNCTION MOD(COUNTER, 5) IS EQUAL TO ZERO)\n                        MOVE \"FizzBuzz\" TO NONSENSE",
+            "supports_requirement": [
+              "REQ-003"
+            ]
+          }
+        ],
+        "rationale": "The loop spans 1 through 100, and the EVALUATE block assigns the correct FizzBuzz variant or the numeric value before displaying it."
+      }
+    },
+    {
+      "id": "REQ-004",
+      "requirement": "The system shall seed its random number generator from the current date and time before building quiz data.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "DCBNTEST.cbl",
+            "block": "100-MAIN",
+            "role": "start the quiz engine"
+          },
+          {
+            "file": "DCBNTEST.cbl",
+            "block": "110-GENERATE-SEED",
+            "role": "derive a seed from the current date and initialize randomness"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "DCBNTEST.cbl",
+            "block": "110-GENERATE-SEED",
+            "code": "       110-GENERATE-SEED.\n      *\n      * Obtain system date & time to help seed RANDOM function\n           MOVE FUNCTION CURRENT-DATE TO DATETIME\n      *\n      * Generate SEED from DATETIME\n           COMPUTE SEED = MO * DD * HH * MM * SS * HUND-SEC\n      *\n      * Lower SEED to within maximum limit for RANDOM function",
+            "supports_requirement": [
+              "REQ-004"
+            ]
+          }
+        ],
+        "rationale": "The seed paragraph explicitly derives the seed from CURRENT-DATE components and prepares the RANDOM intrinsic for quiz generation."
+      }
+    },
+    {
+      "id": "REQ-005",
+      "requirement": "The system shall populate twenty quiz questions with random decimal values and matching binary answers.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "DCBNTEST.cbl",
+            "block": "100-MAIN",
+            "role": "invoke quiz construction"
+          },
+          {
+            "file": "DCBNTEST.cbl",
+            "block": "115-POPULATE-TEST",
+            "role": "generate the 20-question dataset"
+          },
+          {
+            "file": "DCBNTEST.cbl",
+            "block": "200-GENERATE-UNIQUE-RANDOM-NUM",
+            "role": "produce each decimal question value"
+          },
+          {
+            "file": "DCBNTEST.cbl",
+            "block": "220-CONVERT-DEC2BIN",
+            "role": "store the corresponding binary answer"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "DCBNTEST.cbl",
+            "block": "115-POPULATE-TEST",
+            "code": "       115-POPULATE-TEST.\n           PERFORM VARYING LOOP-COUNTER FROM 1 BY 1\n              UNTIL LOOP-COUNTER IS GREATER THAN 20\n              PERFORM 200-GENERATE-UNIQUE-RANDOM-NUM\n              PERFORM 220-CONVERT-DEC2BIN\n           END-PERFORM.",
+            "supports_requirement": [
+              "REQ-005"
+            ]
+          },
+          {
+            "file": "DCBNTEST.cbl",
+            "block": "220-CONVERT-DEC2BIN",
+            "code": "           MOVE 16 TO POWER-OF-TWO\n           MOVE \"00000\" TO BITS\n      *\n      * Convert the decimal number to a string of 5 binary digits\n           PERFORM VARYING POWER-COUNTER FROM 1 BY 1\n              UNTIL POWER-COUNTER IS GREATER THAN 5",
+            "supports_requirement": [
+              "REQ-005"
+            ]
+          }
+        ],
+        "rationale": "The quiz builder loops exactly 20 times, generates a random number for each entry, and converts that number to a binary answer string."
+      }
+    },
+    {
+      "id": "REQ-006",
+      "requirement": "The system shall prompt for a decimal answer to each binary question, reject incorrect or nonnumeric input, and reveal the correct decimal answer when needed.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "DCBNTEST.cbl",
+            "block": "100-MAIN",
+            "role": "drive the binary-to-decimal quiz phase"
+          },
+          {
+            "file": "DCBNTEST.cbl",
+            "block": "130-BINARY-DECIMAL-TEST",
+            "role": "accept and grade decimal answers"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "DCBNTEST.cbl",
+            "block": "130-BINARY-DECIMAL-TEST",
+            "code": "       130-BINARY-DECIMAL-TEST.\n           DISPLAY LOOP-COUNTER \": BINARY: \"\n      -            BINARY-ANSWERS(LOOP-COUNTER) \" | DECIMAL? \"\n                   WITH NO ADVANCING\n           ACCEPT GUESS\n      * Checks for non-numeric answers FIRST\n           IF FUNCTION TEST-NUMVAL(GUESS) IS EQUAL TO ZERO\n              THEN",
+            "supports_requirement": [
+              "REQ-006"
+            ]
+          }
+        ],
+        "rationale": "The paragraph prints the binary prompt, reads the guess, checks for numeric input first, and subtracts from the score while displaying the correct answer when the guess is wrong."
+      }
+    },
+    {
+      "id": "REQ-007",
+      "requirement": "The system shall prompt for a binary answer to each decimal question, compare it with the stored binary string, and show the correct answer on a miss.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "DCBNTEST.cbl",
+            "block": "100-MAIN",
+            "role": "drive the decimal-to-binary quiz phase"
+          },
+          {
+            "file": "DCBNTEST.cbl",
+            "block": "140-DECIMAL-BINARY-TEST",
+            "role": "accept and grade binary answers"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "DCBNTEST.cbl",
+            "block": "140-DECIMAL-BINARY-TEST",
+            "code": "       140-DECIMAL-BINARY-TEST.\n           MOVE DECIMAL-ANSWERS(LOOP-COUNTER) TO DECIMAL-NUMBER\n           DISPLAY LOOP-COUNTER \": DECIMAL: \"\n      -            DECIMAL-NUMBER \" | BINARY? \"\n                   WITH NO ADVANCING\n           ACCEPT GUESS\n      * Checks for inequality of GUESS and corresponding BINARY-ANSWER\n           IF GUESS IS NOT EQUAL TO BINARY-ANSWERS(LOOP-COUNTER)\n              THEN",
+            "supports_requirement": [
+              "REQ-007"
+            ]
+          }
+        ],
+        "rationale": "The paragraph prints the decimal prompt, accepts the binary guess, and directly compares it against the generated answer string."
+      }
+    },
+    {
+      "id": "REQ-008",
+      "requirement": "The system shall compute the final quiz score as a percentage and display the number correct.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "DCBNTEST.cbl",
+            "block": "150-CALCULATE-SCORE",
+            "role": "compute and display the final score"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "DCBNTEST.cbl",
+            "block": "150-CALCULATE-SCORE",
+            "code": "       150-CALCULATE-SCORE.\n           DIVIDE CORRECT BY 20 GIVING SCORE ROUNDED\n           MULTIPLY 100 BY SCORE\n           MOVE SCORE TO SCORE-OUT\n           DISPLAY SPACES\n           DISPLAY \"CORRECT: \" CORRECT\n           DISPLAY \"You scored: \" SCORE-OUT \"%.\".",
+            "supports_requirement": [
+              "REQ-008"
+            ]
+          }
+        ],
+        "rationale": "The score paragraph converts the count of correct answers into a percentage and prints both the raw count and the formatted score."
+      }
+    },
+    {
+      "id": "REQ-009",
+      "requirement": "The system shall open the input and output datasets, stamp the report with the current date and time, write the report headers, and close the files after processing.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "HACKRANK.cbl",
+            "block": "100-primary",
+            "role": "orchestrate the report workflow"
+          },
+          {
+            "file": "HACKRANK.cbl",
+            "block": "105-open-files",
+            "role": "open input and output datasets"
+          },
+          {
+            "file": "HACKRANK.cbl",
+            "block": "110-obtain-current-date",
+            "role": "prepare the report stamp"
+          },
+          {
+            "file": "HACKRANK.cbl",
+            "block": "115-write-report-headers",
+            "role": "write header lines"
+          },
+          {
+            "file": "HACKRANK.cbl",
+            "block": "190-close-files",
+            "role": "close datasets"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "HACKRANK.cbl",
+            "block": "105-open-files",
+            "code": "       105-open-files.\n           open input hack-in-file\n           open output hack-filtered-file.",
+            "supports_requirement": [
+              "REQ-009"
+            ]
+          },
+          {
+            "file": "HACKRANK.cbl",
+            "block": "110-obtain-current-date",
+            "code": "           move function current-date to datetime\n           move mo to todays-month\n           move da to todays-day\n           move year to todays-year\n           move todays-date to tdys-date-out\n           move report-time to rpt-time-out\n           move first-report-line to rpt-hdr-ln(1)\n           move rpt-hdr-ln(1) to hack-filtered",
+            "supports_requirement": [
+              "REQ-009"
+            ]
+          }
+        ],
+        "rationale": "The control flow opens both datasets, stamps the report with the current date and time, writes the opening header block, and closes the files at the end."
+      }
+    },
+    {
+      "id": "REQ-010",
+      "requirement": "The system shall read each CSV record, split the fields into working storage, and normalize the creation timestamp into separate date and time parts.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "HACKRANK.cbl",
+            "block": "120-extract-from-csv",
+            "role": "read and parse the source CSV record"
+          },
+          {
+            "file": "HACKRANK.cbl",
+            "block": "121-search-for-strings",
+            "role": "continue processing on the parsed title"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "HACKRANK.cbl",
+            "block": "120-extract-from-csv",
+            "code": "       120-extract-from-csv.\n      *\n      * Read file\n           read hack-in-file\n              at end move \"Y\" to end-of-file-flag\n           end-read\n\n           unstring hack-in delimited by \",\"\n           into     hack-in-id\n                    hack-in-title\n                    hack-in-points\n                    hack-in-comments\n                    hack-in-author\n                    hack-in-create-dt\n           end-unstring",
+            "supports_requirement": [
+              "REQ-010"
+            ]
+          },
+          {
+            "file": "HACKRANK.cbl",
+            "block": "120-extract-from-csv",
+            "code": "           unstring hack-in-create-dt delimited by space\n           into     create-date-stamp\n                    create-time-stamp\n           end-unstring\n      *\n      * Unstring time-stamp into separate hour & minute fields\n           unstring create-time-stamp delimited by \":\"\n           into     created-hour\n                    actual-minute\n           end-unstring",
+            "supports_requirement": [
+              "REQ-010"
+            ]
+          }
+        ],
+        "rationale": "The parsing paragraph separates the CSV columns first, then splits the timestamp into date, time, hour, and minute fields for later scoring."
+      }
+    },
+    {
+      "id": "REQ-011",
+      "requirement": "The system shall keep only stories whose titles mention mainframe or cobol, regardless of letter case.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "HACKRANK.cbl",
+            "block": "121-search-for-strings",
+            "role": "inspect the title for the target keywords"
+          },
+          {
+            "file": "HACKRANK.cbl",
+            "block": "122-create-output-record",
+            "role": "emit matching records"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "HACKRANK.cbl",
+            "block": "121-search-for-strings",
+            "code": "       121-search-for-strings.\n      *\n      *   b.Select only the records that have mention of the words\n      *     'mainframe' OR 'cobol' (ignoring case) in the Title field\n           move zero to counter\n           move function lower-case(hack-in-title) to inspected-title\n           inspect inspected-title tallying counter for all\n                    search-string-1",
+            "supports_requirement": [
+              "REQ-011"
+            ]
+          }
+        ],
+        "rationale": "The title is converted to lower case before INSPECT counts the target substrings, so the filter works without regard to capitalization."
+      }
+    },
+    {
+      "id": "REQ-012",
+      "requirement": "The system shall calculate a ranking score from votes and age, then write the filtered story record to the output dataset.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "HACKRANK.cbl",
+            "block": "122-create-output-record",
+            "role": "prepare the filtered record"
+          },
+          {
+            "file": "HACKRANK.cbl",
+            "block": "130-calculate-score",
+            "role": "compute the ranking score"
+          },
+          {
+            "file": "HACKRANK.cbl",
+            "block": "140-write-record",
+            "role": "write the completed output record"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "HACKRANK.cbl",
+            "block": "130-calculate-score",
+            "code": "       130-calculate-score.\n      *\n      *   c.Calculate the ranking score for each record based on the\n      *     number of votes it received and the time it was posted\n      *     (ignore date as we assume all posts were created on the same\n      *     date)\n      *\n      * Calculate age using current date @11:59pm as a reference point.\n      *\n           compute age rounded = (hh - hour) + (minute / 60)\n      *\n           add points to comments giving votes\n      *\n           compute score = (votes - 1) ** 0.8 / (age + 2) ** 1.8",
+            "supports_requirement": [
+              "REQ-012"
+            ]
+          },
+          {
+            "file": "HACKRANK.cbl",
+            "block": "140-write-record",
+            "code": "       140-write-record.\n           move hack-out-record to hack-filtered\n      *     display hack-out-record\n           write hack-filtered after advancing 1 line.",
+            "supports_requirement": [
+              "REQ-012"
+            ]
+          }
+        ],
+        "rationale": "The score paragraph derives age and votes, applies the ranking formula, and the write paragraph persists the finished front-page record."
+      }
+    },
+    {
+      "id": "REQ-013",
+      "requirement": "The system shall let the user choose an affinity law, label the quantity being analyzed, and allow zero to exit from the opening screen.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "AFFINITY.cbl",
+            "block": "100-main-paragraph",
+            "role": "start the calculator"
+          },
+          {
+            "file": "AFFINITY.cbl",
+            "block": "200-opening-screen-data-entry",
+            "role": "display the menu and capture the selected law"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "AFFINITY.cbl",
+            "block": "200-opening-screen-data-entry",
+            "code": "       200-opening-screen-data-entry.\n           display spaces\n           display \"***** AFFINITY LAWS CALCULATOR UTILITY BEGINS *****\"\n           display spaces\n           display \"Select a law (1, 2, 3, or 0 to exit): \"\n                    with no advancing\n           accept law\n\n           evaluate law\n           when 0 perform 999-end-program\n\n           when 1 move \"flow rate\" to description\n\n           when 2 move \"pressure\" to description",
+            "supports_requirement": [
+              "REQ-013"
+            ]
+          }
+        ],
+        "rationale": "The opening-screen paragraph acts as the program gatekeeper: it selects the law, assigns the matching quantity label, and exits immediately when the user enters zero."
+      }
+    },
+    {
+      "id": "REQ-014",
+      "requirement": "The system shall validate the previous quantity and both RPM inputs, rejecting nonnumeric values and out-of-range values before calculation.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "AFFINITY.cbl",
+            "block": "300-quantity1-data-entry",
+            "role": "validate the prior quantity"
+          },
+          {
+            "file": "AFFINITY.cbl",
+            "block": "400-oldrpm-data-entry",
+            "role": "validate the old RPM input"
+          },
+          {
+            "file": "AFFINITY.cbl",
+            "block": "500-newrpm-data-entry",
+            "role": "validate the new RPM input"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "AFFINITY.cbl",
+            "block": "300-quantity1-data-entry",
+            "code": "       300-quantity1-data-entry.\n           display \"Enter previous \" description \": \" with no advancing\n           accept quantity1-in\n\n      * Did the user enter a valid numeric value?\n           if function test-numval(quantity1-in) IS NOT EQUAL ZERO then\n              display \"Previous \" description not-numeric\n              perform 300-quantity1-data-entry",
+            "supports_requirement": [
+              "REQ-014"
+            ]
+          },
+          {
+            "file": "AFFINITY.cbl",
+            "block": "400-oldrpm-data-entry",
+            "code": "       400-oldrpm-data-entry.\n           display \"Enter old motor RPM value: \" with no advancing\n           accept rpm1-in\n\n      * Did the user enter a valid numeric value?\n           if function test-numval(rpm1-in) IS NOT EQUAL ZERO then\n              display \"Old RPM value\" not-numeric\n              perform 400-oldrpm-data-entry",
+            "supports_requirement": [
+              "REQ-014"
+            ]
+          }
+        ],
+        "rationale": "Each input paragraph retries on invalid numeric entry and enforces zero, negative, and upper-bound checks before the calculation stage can run."
+      }
+    },
+    {
+      "id": "REQ-015",
+      "requirement": "The system shall support shaft or pulley drivetrain selection and compute the pulley ratio from pulley diameters when a pulley drive is used.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "AFFINITY.cbl",
+            "block": "600-drivetrain-data-entry",
+            "role": "choose shaft or pulley drive"
+          },
+          {
+            "file": "AFFINITY.cbl",
+            "block": "pulley-data-entry",
+            "role": "capture pulley diameters and compute ratio"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "AFFINITY.cbl",
+            "block": "600-drivetrain-data-entry",
+            "code": "       600-drivetrain-data-entry.\n           display spaces\n           display \"Does the drivetrain use a [P]ulley or a [S]haft?\"\n           display \"Select a drivetrain: \" with no advancing\n           accept drivetrain-flag\n           move function upper-case(drivetrain-flag) to drivetrain-flag\n\n           evaluate drivetrain-flag\n           when \"S\" move 1 to pulley-ratio\n\n           when \"P\" perform pulley-data-entry",
+            "supports_requirement": [
+              "REQ-015"
+            ]
+          },
+          {
+            "file": "AFFINITY.cbl",
+            "block": "pulley-data-entry",
+            "code": "       pulley-data-entry.\n           display spaces\n           display \"Enter motor pulley diameter: \" with no advancing\n           accept pulley-diameter1-in\n...\n           display \"Enter load pulley diameter: \" with no advancing\n           accept pulley-diameter2-in\n...\n           divide pulley-diameter1 by pulley-diameter2\n                  giving pulley-ratio rounded.",
+            "supports_requirement": [
+              "REQ-015"
+            ]
+          }
+        ],
+        "rationale": "The drivetrain branch either defaults to a 1:1 shaft ratio or derives a pulley ratio from the entered pulley diameters."
+      }
+    },
+    {
+      "id": "REQ-016",
+      "requirement": "When horsepower is selected, the system shall capture power factor, phase type, and motor efficiency before calculating the power-related values.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "AFFINITY.cbl",
+            "block": "200-opening-screen-data-entry",
+            "role": "enter the horsepower branch"
+          },
+          {
+            "file": "AFFINITY.cbl",
+            "block": "ac-powered-query",
+            "role": "collect power factor and phase"
+          },
+          {
+            "file": "AFFINITY.cbl",
+            "block": "motor-efficiency-data-entry",
+            "role": "collect motor efficiency"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "AFFINITY.cbl",
+            "block": "ac-powered-query",
+            "code": "       ac-powered-query.\n           display \"Enter power factor: \" with no advancing\n           accept power-factor-in\n\n           if function test-numval(power-factor-in)\n              IS NOT EQUAL ZERO then\n              display \"Power Factor\" not-numeric\n              perform ac-powered-query\n           else",
+            "supports_requirement": [
+              "REQ-016"
+            ]
+          },
+          {
+            "file": "AFFINITY.cbl",
+            "block": "motor-efficiency-data-entry",
+            "code": "       motor-efficiency-data-entry.\n           display \"Enter motor efficiency as %: \" with no advancing\n           accept motor-eff-in\n\n           if function test-numval(motor-eff-in)\n              IS NOT EQUAL ZERO then\n              display \"Motor efficiency\" not-numeric\n              perform motor-efficiency-data-entry\n           else",
+            "supports_requirement": [
+              "REQ-016"
+            ]
+          }
+        ],
+        "rationale": "The horsepower branch adds electrical inputs and range checks before the later calculation paragraph converts the values into electrical power."
+      }
+    },
+    {
+      "id": "REQ-017",
+      "requirement": "The system shall compute the new quantity and, for horsepower mode, the old and new electrical power values, then display the results.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "AFFINITY.cbl",
+            "block": "700-calculate-it",
+            "role": "compute the scaled quantity and horsepower values"
+          },
+          {
+            "file": "AFFINITY.cbl",
+            "block": "800-disp-result",
+            "role": "display the final results"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "AFFINITY.cbl",
+            "block": "700-calculate-it",
+            "code": "       700-calculate-it.\n      * Affinity Law computation:\n      * Apply pulley ratio to oldrpm & newrpm\n      * to convert motor rpms to load rpms\n           compute rpm1 rounded = rpm1 * pulley-ratio\n           compute rpm2 rounded = rpm2 * pulley-ratio\n      *\n      * If rpms differ, compute quantity2 based on rpm\n           if rpm1 IS NOT EQUAL TO rpm2 then\n              compute quantity2 rounded =\n                       quantity1 * (rpm2 / rpm1) ** law",
+            "supports_requirement": [
+              "REQ-017"
+            ]
+          },
+          {
+            "file": "AFFINITY.cbl",
+            "block": "800-disp-result",
+            "code": "       800-disp-result.\n           move rpm1 to rpm1-out\n           move rpm2 to rpm2-out\n           move quantity1 to quantity1-out\n           move quantity2 to quantity2-out\n           display spaces\n           display \"***** RESULTS *****\"\n           display spaces",
+            "supports_requirement": [
+              "REQ-017"
+            ]
+          }
+        ],
+        "rationale": "The calculation paragraph scales the load values using the selected law, and the display paragraph publishes the computed outputs in the final report."
+      }
+    },
+    {
+      "id": "REQ-018",
+      "requirement": "The system shall validate the starting seed, reject invalid or out-of-range values, and display the Collatz sequence until the value reaches 1.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "COLLATZ.cbl",
+            "block": "100-MAIN",
+            "role": "start the sequence runner"
+          },
+          {
+            "file": "COLLATZ.cbl",
+            "block": "110-SEED-DATA-ENTRY",
+            "role": "validate and accept the seed"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "COLLATZ.cbl",
+            "block": "110-SEED-DATA-ENTRY",
+            "code": "       110-SEED-DATA-ENTRY.\n           DISPLAY \"Enter seed value (up to 31 digits): \"\n           ACCEPT SEED-IN\n      * Did the user enter a valid numeric value?\n           IF FUNCTION TEST-NUMVAL(SEED-IN) IS NOT EQUAL ZERO THEN\n              DISPLAY \"Seed value \" not-numeric\n              PERFORM 110-SEED-DATA-ENTRY\n           ELSE",
+            "supports_requirement": [
+              "REQ-018"
+            ]
+          },
+          {
+            "file": "COLLATZ.cbl",
+            "block": "100-MAIN",
+            "code": "       100-MAIN.\n           PERFORM 110-SEED-DATA-ENTRY.\n\n           MOVE FUNCTION CURRENT-DATE TO datetime-start\n\n           PERFORM VARYING ITERATIONS FROM 0 BY 1 UNTIL SEED = 1\n              IF FUNCTION MOD(SEED, 2) IS EQUAL TO ZERO THEN\n                 DIVIDE 2 INTO SEED\n              ELSE",
+            "supports_requirement": [
+              "REQ-018"
+            ]
+          }
+        ],
+        "rationale": "The seed paragraph rejects invalid seeds and the main loop repeatedly applies the even/odd Collatz rule until the sequence reaches one."
+      }
+    },
+    {
+      "id": "REQ-019",
+      "requirement": "The system shall reverse the credit-card number, separate odd and even digits, double the even digits, and report whether the number is valid by the Luhn check.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "LUHN.cbl",
+            "block": "100-MAIN",
+            "role": "extract the check digit and reverse the number"
+          },
+          {
+            "file": "LUHN.cbl",
+            "block": "200-LUHN",
+            "role": "build odd/even digit arrays and checksum"
+          },
+          {
+            "file": "LUHN.cbl",
+            "block": "300-SHOW-RESULTS",
+            "role": "display the validation result"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "LUHN.cbl",
+            "block": "100-MAIN",
+            "code": "       100-MAIN.\n      *\n      * EXTRACT CHECK-DIGIT FROM CREDIT CARD NUMBER\n           MOVE CC-NUM (16:1) TO CHECK-DIGIT.\n      *\n      * REVERSE CREDIT CARD NUMBER & FEED IT INTO THE LUHN ALGORITHM\n           MOVE FUNCTION REVERSE(CC-NUM) TO TEST-NUM\n           PERFORM 200-LUHN\n           PERFORM 300-SHOW-RESULTS",
+            "supports_requirement": [
+              "REQ-019"
+            ]
+          },
+          {
+            "file": "LUHN.cbl",
+            "block": "200-LUHN",
+            "code": "       200-LUHN.\n      *\n           MOVE 1 TO ODD-IDX\n           MOVE 1 TO EVEN-IDX\n      *\n      * EXTRACT ODD AND EVEN DIGITS\n           PERFORM VARYING DIGIT-COUNTER FROM 1 BY 1\n                   UNTIL DIGIT-COUNTER IS GREATER THAN 16\n              IF FUNCTION MOD(DIGIT-COUNTER 2) IS EQUAL TO ZERO THEN\n                 MOVE TEST-NUM(DIGIT-COUNTER:1)\n                    TO EVEN-DIGIT(EVEN-IDX)",
+            "supports_requirement": [
+              "REQ-019"
+            ]
+          }
+        ],
+        "rationale": "The main paragraph reverses the card number, the Luhn paragraph splits and processes odd and even digits, and the results paragraph reports VALID or INVALID."
+      }
+    },
+    {
+      "id": "REQ-020",
+      "requirement": "The system shall initialize the Game of Life board from the input file, count living neighbors, and evolve both living and dead cells into the next generation.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "CNWYLIFE.cbl",
+            "block": "100-MAIN",
+            "role": "drive initialization and generation updates"
+          },
+          {
+            "file": "CNWYLIFE.cbl",
+            "block": "110-INITIALIZE",
+            "role": "load the initial grid"
+          },
+          {
+            "file": "CNWYLIFE.cbl",
+            "block": "130-CONWAY-ALG",
+            "role": "copy and update the next generation"
+          },
+          {
+            "file": "CNWYLIFE.cbl",
+            "block": "200-COUNT-LIVING-NEIGHBORS",
+            "role": "count neighboring live cells"
+          },
+          {
+            "file": "CNWYLIFE.cbl",
+            "block": "210-LIVING-CELL-NEIGHBORS",
+            "role": "apply live-cell rules"
+          },
+          {
+            "file": "CNWYLIFE.cbl",
+            "block": "220-DEAD-CELL-NEIGHBORS",
+            "role": "apply dead-cell rules"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "CNWYLIFE.cbl",
+            "block": "130-CONWAY-ALG",
+            "code": "       130-CONWAY-ALG.\n      * Copy previous=generation to next-generation\n           MOVE previous-generation to next-generation\n      * Evaluate all cells in sequence, but skip boundary cells\n           PERFORM VARYING row-counter FROM 2 BY 1\n                 UNTIL row-counter IS EQUAL TO max-rows\n           PERFORM VARYING column-counter FROM 2 BY 1\n                 UNTIL column-counter IS EQUAL TO max-columns",
+            "supports_requirement": [
+              "REQ-020"
+            ]
+          },
+          {
+            "file": "CNWYLIFE.cbl",
+            "block": "200-COUNT-LIVING-NEIGHBORS",
+            "code": "       200-COUNT-LIVING-NEIGHBORS.\n           PERFORM VARYING y FROM -1 BY 1 UNTIL y IS GREATER THAN 1\n           PERFORM VARYING x FROM -1 BY 1 UNTIL x IS GREATER THAN 1\n           IF x IS NOT EQUAL TO ZERO OR\n              y IS NOT EQUAL TO ZERO\n           THEN\n              ADD y TO row-counter GIVING neighbor-y",
+            "supports_requirement": [
+              "REQ-020"
+            ]
+          }
+        ],
+        "rationale": "The program copies the previous generation, scans each non-border cell, counts live neighbors, and applies the live/dead transition rules to produce the next board."
+      }
+    },
+    {
+      "id": "REQ-021",
+      "requirement": "The system shall accept a difficulty level, derive the board size, seed the random generator, populate the card table, and display the blank table layout.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "concentration2.cbl",
+            "block": "105-INITIALIZE",
+            "role": "capture difficulty and derive the table size"
+          },
+          {
+            "file": "concentration2.cbl",
+            "block": "110-GENERATE-SEEDS",
+            "role": "seed the random generator"
+          },
+          {
+            "file": "concentration2.cbl",
+            "block": "120-POPULATE-CARD-TABLE",
+            "role": "populate the visible card table"
+          },
+          {
+            "file": "concentration2.cbl",
+            "block": "150-DISPLAY-BLANK-TABLE",
+            "role": "render the blank table"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "concentration2.cbl",
+            "block": "105-INITIALIZE",
+            "code": "       105-INITIALIZE.\n      *\n      * Retrieve difficulty level from user\n           PERFORM WITH TEST AFTER\n              UNTIL DIFFICULTY IS GREATER THAN ZERO AND\n                    DIFFICULTY IS LESS THAN 12\n               PERFORM WITH TEST AFTER UNTIL\n                  FUNCTION TEST-NUMVAL(DIFFICULTY-IN) IS EQUAL TO ZERO\n                  DISPLAY \"Enter Difficulty Level (1-11): \"\n                  ACCEPT DIFFICULTY-IN",
+            "supports_requirement": [
+              "REQ-021"
+            ]
+          },
+          {
+            "file": "concentration2.cbl",
+            "block": "150-DISPLAY-BLANK-TABLE",
+            "code": "       150-DISPLAY-BLANK-TABLE.\n           DISPLAY SPACES\n           DISPLAY \"   \" ALPHA-BET-HEADER\n           DISPLAY \"  +\" LINE-HEADER \"+\"\n           PERFORM VARYING IDX FROM 1 BY 1\n                    UNTIL IDX IS GREATER THAN TABLE-SIZE\n                    MOVE IDX TO IDX-OUT\n                    DISPLAY IDX-OUT \"|\" R IN BLANK-TABLE(IDX) \"|\"",
+            "supports_requirement": [
+              "REQ-021"
+            ]
+          }
+        ],
+        "rationale": "The initialization paragraph constrains the difficulty range and computes the board size, while the later paragraphs seed the random positions and render the blank grid for play."
+      }
+    },
+    {
+      "id": "REQ-022",
+      "requirement": "The system shall initialize the orchard from system time, display the random probabilities, and evolve burning, tree, and empty cells according to the fire-spread rules.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "FRSTFIRE.cbl",
+            "block": "100-MAIN",
+            "role": "run the generation loop"
+          },
+          {
+            "file": "FRSTFIRE.cbl",
+            "block": "110-INITIALIZE",
+            "role": "seed and populate the orchard"
+          },
+          {
+            "file": "FRSTFIRE.cbl",
+            "block": "111-DISP-PARMS",
+            "role": "display initialization probabilities"
+          },
+          {
+            "file": "FRSTFIRE.cbl",
+            "block": "130-EVOLVE-NG",
+            "role": "evolve the next generation"
+          },
+          {
+            "file": "FRSTFIRE.cbl",
+            "block": "131-EVOLVE-BURNING-CELL",
+            "role": "apply burning-cell rule"
+          },
+          {
+            "file": "FRSTFIRE.cbl",
+            "block": "132-EVOLVE-TREE-CELL",
+            "role": "apply tree-cell rule"
+          },
+          {
+            "file": "FRSTFIRE.cbl",
+            "block": "133-EVOLVE-EMPTY-CELL",
+            "role": "apply empty-cell rule"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "FRSTFIRE.cbl",
+            "block": "110-INITIALIZE",
+            "code": "       110-INITIALIZE.\n      *\n      * Randomzize using system time\n           MOVE FUNCTION current-date TO datetime\n           STRING hund-sec ss mm hh\n                    DELIMITED BY SIZE\n                    INTO seed\n           END-STRING\n           MOVE seed TO random-seed",
+            "supports_requirement": [
+              "REQ-022"
+            ]
+          },
+          {
+            "file": "FRSTFIRE.cbl",
+            "block": "130-EVOLVE-NG",
+            "code": "       130-EVOLVE-NG.\n      *\n      * Copy contents of previous generation to next generation\n      *     MOVE previous-generation TO next-generation\n      *\n      * EVOLVE AS FOLLOWS:\n      *\n      * 1. A burning cell turns into an empty cell\n      * 2. A tree will burn if at least one neighbor is burning\n      * 3. A tree ignites with probability   f   even if no neighbor is\n      *    burning",
+            "supports_requirement": [
+              "REQ-022"
+            ]
+          }
+        ],
+        "rationale": "The initialization code derives randomness from the current time, the display paragraph prints the configured probabilities, and the evolve paragraphs encode the three state-transition rules."
+      }
+    },
+    {
+      "id": "REQ-023",
+      "requirement": "The system shall open the customer and print files, obtain the current date and time, write report headers, create the report rows, and close the files.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "TOPACCTS.cbl",
+            "block": "100-PRIMARY",
+            "role": "orchestrate the account report"
+          },
+          {
+            "file": "TOPACCTS.cbl",
+            "block": "105-OPEN-FILES",
+            "role": "open input and output files"
+          },
+          {
+            "file": "TOPACCTS.cbl",
+            "block": "110-OBTAIN-CURRENT-DATE",
+            "role": "stamp the report date and time"
+          },
+          {
+            "file": "TOPACCTS.cbl",
+            "block": "115-WRITE-REPORT-HEADERS",
+            "role": "write header lines"
+          },
+          {
+            "file": "TOPACCTS.cbl",
+            "block": "120-CREATE-REPORT",
+            "role": "build report lines from customer records"
+          },
+          {
+            "file": "TOPACCTS.cbl",
+            "block": "130-CLOSE-FILES",
+            "role": "close the files"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "TOPACCTS.cbl",
+            "block": "105-OPEN-FILES",
+            "code": "       105-OPEN-FILES.\n           OPEN INPUT CUST-REC\n           OPEN OUTPUT PRT-LINE.",
+            "supports_requirement": [
+              "REQ-023"
+            ]
+          },
+          {
+            "file": "TOPACCTS.cbl",
+            "block": "120-CREATE-REPORT",
+            "code": "       120-CREATE-REPORT.\n           READ CUST-REC\n                AT END\n                MOVE \"Y\" TO EOF-FLAG\n                MOVE TOP-CUST-COUNT TO NUM-REC-OUT\n           END-READ\n           move CUST-AMOUNT-IN to CUST-AMOUNT-FILTER\n           compute amount = function numval(nocommas)\n           if amount is greater than top-amount then\n              add 1 to top-cust-count",
+            "supports_requirement": [
+              "REQ-023"
+            ]
+          }
+        ],
+        "rationale": "The report flow opens both datasets, stamps the output, walks the customer records, filters the top accounts, and then closes the files."
+      }
+    },
+    {
+      "id": "REQ-024",
+      "requirement": "The system shall validate both pulley diameters and the pulley distance, compute the belt length, and display the result.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "BELTLEN.cbl",
+            "block": "100-main-paragraph",
+            "role": "run the pulley-length workflow"
+          },
+          {
+            "file": "BELTLEN.cbl",
+            "block": "300-pulley1-data-entry",
+            "role": "validate the first pulley diameter"
+          },
+          {
+            "file": "BELTLEN.cbl",
+            "block": "400-pulley2-data-entry",
+            "role": "validate the second pulley diameter"
+          },
+          {
+            "file": "BELTLEN.cbl",
+            "block": "500-pulley-distance-data-entry",
+            "role": "validate the distance input"
+          },
+          {
+            "file": "BELTLEN.cbl",
+            "block": "600-calculate-it",
+            "role": "calculate belt length"
+          },
+          {
+            "file": "BELTLEN.cbl",
+            "block": "700-display-results",
+            "role": "display the belt length"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "BELTLEN.cbl",
+            "block": "600-calculate-it",
+            "code": "       600-calculate-it.\n           compute belt-length rounded = function pi *\n              (pulley-diameter1 + pulley-diameter2) * 0.5 +\n              (pulley-distance * 2) +\n              (function abs(pulley-diameter2 - pulley-diameter1) ** 2 /\n              (pulley-distance * 4)).",
+            "supports_requirement": [
+              "REQ-024"
+            ]
+          },
+          {
+            "file": "BELTLEN.cbl",
+            "block": "700-display-results",
+            "code": "       700-display-results.\n           move belt-length to belt-length-out\n           display \"Belt Length: \" belt-length-out.",
+            "supports_requirement": [
+              "REQ-024"
+            ]
+          }
+        ],
+        "rationale": "The three data-entry paragraphs enforce numeric and range checks, the formula paragraph computes the belt length, and the result paragraph prints it."
+      }
+    },
+    {
+      "id": "REQ-025",
+      "requirement": "The system shall validate both pulley diameters and the belt length, compute the pulley distance, and display the resulting distance.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PULLYDIS.cbl",
+            "block": "100-main-paragraph",
+            "role": "run the pulley-distance workflow"
+          },
+          {
+            "file": "PULLYDIS.cbl",
+            "block": "300-pulley1-data-entry",
+            "role": "validate the first pulley diameter"
+          },
+          {
+            "file": "PULLYDIS.cbl",
+            "block": "400-pulley2-data-entry",
+            "role": "validate the second pulley diameter"
+          },
+          {
+            "file": "PULLYDIS.cbl",
+            "block": "500-belt-length-data-entry",
+            "role": "validate the belt length input"
+          },
+          {
+            "file": "PULLYDIS.cbl",
+            "block": "600-calculate-it",
+            "role": "calculate pulley distance"
+          },
+          {
+            "file": "PULLYDIS.cbl",
+            "block": "700-display-results",
+            "role": "display the pulley distance"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PULLYDIS.cbl",
+            "block": "600-calculate-it",
+            "code": "       600-calculate-it.\n      *\n      * Belt Length Formula:\n      *    compute belt-length rounded = function pi *\n      *       (pulley-diameter1 + pulley-diameter2) * 0.5 +\n      *       (pulley-distance * 2) +\n      *       (function abs(pulley-diameter2 - pulley-diameter1) ** 2 /\n      *       (pulley-distance * 4)).\n      *\n           add pulley-diameter1 to pulley-diameter2",
+            "supports_requirement": [
+              "REQ-025"
+            ]
+          },
+          {
+            "file": "PULLYDIS.cbl",
+            "block": "700-display-results",
+            "code": "       700-display-results.\n           move pulley-distance to pulley-distance-out\n      *\n           display \"Pulley Distance: \" pulley-distance-out.",
+            "supports_requirement": [
+              "REQ-025"
+            ]
+          }
+        ],
+        "rationale": "The inputs are range-checked, then the inverse belt-length formula is applied to derive pulley distance and print it."
+      }
+    },
+    {
+      "id": "REQ-026",
+      "requirement": "The system shall use the current date and time as the random seed, roll a die value from 1 to 6, and display the matching ASCII die face.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ROLL.cbl",
+            "block": "100-main-para",
+            "role": "run the die-rolling sequence"
+          },
+          {
+            "file": "ROLL.cbl",
+            "block": "120-roll-the-die",
+            "role": "seed and compute the roll"
+          },
+          {
+            "file": "ROLL.cbl",
+            "block": "130-display-die",
+            "role": "display the ASCII die face"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ROLL.cbl",
+            "block": "120-roll-the-die",
+            "code": "       120-roll-the-die.\n           move function current-date to datetime\n           compute random-num-in = function random(hund-sec)\n           multiply 6 by random-num-in giving cast\n           add 1 to cast.",
+            "supports_requirement": [
+              "REQ-026"
+            ]
+          },
+          {
+            "file": "ROLL.cbl",
+            "block": "130-display-die",
+            "code": "       130-display-die.\n           evaluate cast\n              when 1\n                 perform one\n              when 2\n                 perform two\n              when 3\n                 perform three\n              when 4\n                 perform four\n              when 5\n                 perform five\n              when 6\n                 perform six",
+            "supports_requirement": [
+              "REQ-026"
+            ]
+          }
+        ],
+        "rationale": "The roll paragraph derives a 1-to-6 value from the current timestamp, and the display paragraph dispatches to the matching face art."
+      }
+    },
+    {
+      "id": "REQ-027",
+      "requirement": "The system shall use the current date and time as the random seed, roll a die value from 1 to 6, and display the matching table-based die face.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ROLLDICE.cbl",
+            "block": "100-main-para",
+            "role": "run the die-rolling sequence"
+          },
+          {
+            "file": "ROLLDICE.cbl",
+            "block": "120-roll-the-die",
+            "role": "seed and compute the roll"
+          },
+          {
+            "file": "ROLLDICE.cbl",
+            "block": "130-display-die",
+            "role": "display the die from the table"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ROLLDICE.cbl",
+            "block": "120-roll-the-die",
+            "code": "       120-roll-the-die.\n           move function current-date to datetime\n           compute random-num-in = function random(hund-sec)\n           multiply 6 by random-num-in giving cast\n           add 1 to cast.",
+            "supports_requirement": [
+              "REQ-027"
+            ]
+          },
+          {
+            "file": "ROLLDICE.cbl",
+            "block": "130-display-die",
+            "code": "       130-display-die.\n           perform varying counter from 1 by 1 until last-row\n                 evaluate cast\n                    when 1\n                         display die-side-one(counter)\n                    when 2\n                         display die-side-two(counter)\n                    when 3\n                         display die-side-three(counter)",
+            "supports_requirement": [
+              "REQ-027"
+            ]
+          }
+        ],
+        "rationale": "The random roll is computed from the current time, and the output paragraph prints the selected die image row by row from the die-side tables."
+      }
+    },
+    {
+      "id": "REQ-028",
+      "requirement": "The system shall show the title screen, optionally display instructions, initialize the game board, run the main play loop, and let the user replay or exit.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ESCAPE.cbl",
+            "block": "100-primary",
+            "role": "enter the game flow"
+          },
+          {
+            "file": "ESCAPE.cbl",
+            "block": "110-display-title-screen",
+            "role": "show the title banner"
+          },
+          {
+            "file": "ESCAPE.cbl",
+            "block": "120-instructions-prompt",
+            "role": "offer instructions"
+          },
+          {
+            "file": "ESCAPE.cbl",
+            "block": "210-initialization-paragraph",
+            "role": "build the board and place obstacles"
+          },
+          {
+            "file": "ESCAPE.cbl",
+            "block": "220-main-paragraph",
+            "role": "run the player and robot turns"
+          },
+          {
+            "file": "ESCAPE.cbl",
+            "block": "320-another-game",
+            "role": "offer replay"
+          },
+          {
+            "file": "ESCAPE.cbl",
+            "block": "330-return-to-operating-system",
+            "role": "terminate execution"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ESCAPE.cbl",
+            "block": "120-instructions-prompt",
+            "code": "       120-instructions-prompt.\n           display \"Would you like instructions (Y/N)? \"\n                    with no advancing\n           accept player-in\n           move function lower-case(player-in) to player-in\n\n           EVALUATE true\n               WHEN player-in = 'y'\n                  perform 121-instructions\n               WHEN OTHER\n                  CONTINUE",
+            "supports_requirement": [
+              "REQ-028"
+            ]
+          },
+          {
+            "file": "ESCAPE.cbl",
+            "block": "320-another-game",
+            "code": "       320-another-game.\n           display \"Would you like to play again? (Y/N): \"\n                    with no advancing\n           accept player-in\n           move function lower-case(player-in) to player-in\n           EVALUATE true\n           when player-in is equal to \"y\"\n              go to 210-initialization-paragraph",
+            "supports_requirement": [
+              "REQ-028"
+            ]
+          }
+        ],
+        "rationale": "The top-level flow presents the game, gates the instructions prompt, initializes the playing field, runs the turn loop, and then branches to replay or quit."
+      }
+    },
+    {
+      "id": "REQ-029",
+      "requirement": "The system shall manage a betting round by generating random board numbers, allowing the player to place numbers, displaying the board, and awarding a reward when the player matches the largest number.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "BIGNUM.cbl",
+            "block": "100-main-paragraph",
+            "role": "start the betting game and enter the conditional loop"
+          },
+          {
+            "file": "BIGNUM.cbl",
+            "block": "300-place-your-bet",
+            "role": "accept the bet and handle instructions or quit"
+          },
+          {
+            "file": "BIGNUM.cbl",
+            "block": "400-obtain-random-number",
+            "role": "seed and generate a random number"
+          },
+          {
+            "file": "BIGNUM.cbl",
+            "block": "500-fill-board-tables-loop",
+            "role": "fill the board numbers"
+          },
+          {
+            "file": "BIGNUM.cbl",
+            "block": "600-display-board",
+            "role": "display the board"
+          },
+          {
+            "file": "BIGNUM.cbl",
+            "block": "700-player-places-numbers-loop",
+            "role": "collect player placements"
+          },
+          {
+            "file": "BIGNUM.cbl",
+            "block": "800-board-full",
+            "role": "finish the round and compute the reward"
+          },
+          {
+            "file": "BIGNUM.cbl",
+            "block": "830-calculate-reward",
+            "role": "award winnings"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "BIGNUM.cbl",
+            "block": "300-place-your-bet",
+            "code": "       300-place-your-bet.\n           move wallet to wallet-out\n           display spaces\n           display \"You have \" wallet-out \" in your wallet.\"\n           display \"Enter your bet (\" minimum-bet-out \" minimum); \"\n           display \"'h' for instructions;\"\n           display \" or 'q' to quit: \" with no advancing\n\n           accept player-in",
+            "supports_requirement": [
+              "REQ-029"
+            ]
+          },
+          {
+            "file": "BIGNUM.cbl",
+            "block": "830-calculate-reward",
+            "code": "       830-calculate-reward.\n      * Calculate player's reward:\n      * If you get the largest number possible, you get back twice\n      * your bet!  If you get the first digit the largest you get 25%\n      * of your bet back.\n\n           move zero to reward\n           move reward to reward-out\n           evaluate true\n           when playernum is equal to biggestnum\n              multiply bet by 2 giving reward",
+            "supports_requirement": [
+              "REQ-029"
+            ]
+          }
+        ],
+        "rationale": "The betting loop generates board values, accepts player placements, displays the board, and pays out according to whether the player matches the largest number or only its first digit."
+      }
+    },
+    {
+      "id": "REQ-030",
+      "requirement": "The system shall load the humidity table, calculate design and ventilation parameters, and produce the output report records.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "COMMBLDG.cbl",
+            "block": "100-main-paragraph",
+            "role": "load the humidity table and begin the simulation"
+          },
+          {
+            "file": "COMMBLDG.cbl",
+            "block": "121-calc-design-parameters",
+            "role": "populate the design constants"
+          },
+          {
+            "file": "COMMBLDG.cbl",
+            "block": "125-calc-ventilation",
+            "role": "calculate ventilation values"
+          },
+          {
+            "file": "COMMBLDG.cbl",
+            "block": "140-open-files",
+            "role": "open the output file"
+          },
+          {
+            "file": "COMMBLDG.cbl",
+            "block": "150-calculate-it",
+            "role": "read hourly data and create output"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "COMMBLDG.cbl",
+            "block": "100-main-paragraph",
+            "code": "       100-main-paragraph.\n      *\n      * Initialize specific humidity table\n           open input specific-humidity-file\n           move 1 to table-idx\n           perform 120-init-spec-hum-table\n           close specific-humidity-file\n      *\n           perform 121-calc-design-parameters\n           perform 125-calc-ventilation",
+            "supports_requirement": [
+              "REQ-030"
+            ]
+          },
+          {
+            "file": "COMMBLDG.cbl",
+            "block": "125-calc-ventilation",
+            "code": "       125-calc-ventilation.\n      * Calculate ventilation\n           move Vdot-eab to Vdot-eab-out\n      *\n      * Outside air flow (in CFM):\n           move max-occupancy to current-occupancy\n           compute Vdot-outside-air rounded =\n                    Vdot-per-person * current-occupancy +\n                    Vdot-off-gas * floor-area",
+            "supports_requirement": [
+              "REQ-030"
+            ]
+          }
+        ],
+        "rationale": "The main flow loads the humidity table, computes the design and ventilation outputs, opens the report file, and then processes hourly conditions into output records."
+      }
+    },
+    {
+      "id": "REQ-031",
+      "requirement": "The system shall validate outdoor temperature and relative humidity inputs, compute the heat index, and display caution messages when conditions become hazardous.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "HEATINDX.cbl",
+            "block": "display-title-screen",
+            "role": "introduce the calculator and usage rules"
+          },
+          {
+            "file": "HEATINDX.cbl",
+            "block": "outside-temp-data-entry",
+            "role": "validate and capture outdoor temperature"
+          },
+          {
+            "file": "HEATINDX.cbl",
+            "block": "relative-humidity-data-entry",
+            "role": "validate and capture relative humidity"
+          },
+          {
+            "file": "HEATINDX.cbl",
+            "block": "calculate-it",
+            "role": "compute the heat index"
+          },
+          {
+            "file": "HEATINDX.cbl",
+            "block": "display-results",
+            "role": "display the computed value and caution text"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "HEATINDX.cbl",
+            "block": "outside-temp-data-entry",
+            "code": "       outside-temp-data-entry.\n           display spaces\n           display \"Enter outdoor dry bulb temperature in degF \"\n                    with no advancing\n           display \"(nnn.n): \" with no advancing\n           accept outside-temp-in\n\n      * Did the user enter a valid numeric value?\n           if function test-numval(outside-temp-in) IS NOT EQUAL ZERO\n           then\n              display \"Temperature \" not-numeric\n              go to outside-temp-data-entry",
+            "supports_requirement": [
+              "REQ-031"
+            ]
+          },
+          {
+            "file": "HEATINDX.cbl",
+            "block": "calculate-it",
+            "code": "       calculate-it.\n      * The Rothfusz regression is not appropriate when conditions of\n      * temperature and humidity warrant a heat index value below about\n      * 80 degrees F. In those cases, a simpler formula is applied to\n      * calculate values consistent with Steadman's results:\n      *\n      * HI = 0.5 * {T + 61.0 + [(T-68.0)*1.2] + (RH*0.094)}\n      *\n      * In practice, the simple formula is computed first and the result\n      * averaged with the temperature. If this heat index value is 80\n      * degrees F or higher, the full regression equation along with any\n      * adjustments as described below are applied.\n      *\n           compute heat-index rounded = 0.5 * (outside-temp + 61.0 +\n                   ((outside-temp - 68.0) * 1.2) + relative-humidity *",
+            "supports_requirement": [
+              "REQ-031"
+            ]
+          },
+          {
+            "file": "HEATINDX.cbl",
+            "block": "display-results",
+            "code": "       display-results.\n           display spaces\n           display \"Outdoor Temperature: \" outside-temp-out \" degF\"\n           display \"Relative Humidity: \" relative-humidity-out \"%\"\n           display \"Heat Index: \" heat-index-out \" degF\"\n\n           evaluate TRUE\n           when heat-index > 79 AND heat-index < 90\n              display spaces\n              display \"************************************************\"\n              display \"** CAUTION - Fatigue possible with prolonged  **\"\n              display \"** exposure and/or physical activity.         **\"\n              display \"************************************************\"\n           when heat-index >= 90 AND heat-index < 105\n              display spaces\n              display \"************************************************\"\n              display \"*** EXTREME CAUTION - Sunstroke, muscle      ***\"\n              display \"*** cramps, and/or heat exhaustion possible  ***\"\n              display \"*** with prolonged exposure and/or physical  ***\"\n              display \"*** activity.                                ***\"\n              display \"************************************************\"\n           when heat-index >= 105 AND heat-index < 130",
+            "supports_requirement": [
+              "REQ-031"
+            ]
+          }
+        ],
+        "rationale": "The temperature and humidity paragraphs reject nonnumeric and zero values, the calculation paragraph computes the heat index using the published formula, and the results paragraph emits the hazard messages when the computed index reaches the caution ranges."
+      }
+    },
+    {
+      "id": "REQ-032",
+      "requirement": "The system shall convert annual worth into present value after validating the annual worth, interest rate, and term inputs.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "FPGA.cbl",
+            "block": "display-title-screen",
+            "role": "introduce the present value calculator"
+          },
+          {
+            "file": "FPGA.cbl",
+            "block": "annual-worth-data-entry",
+            "role": "validate and capture annual worth"
+          },
+          {
+            "file": "FPGA.cbl",
+            "block": "interest-rate-data-entry",
+            "role": "validate and capture interest"
+          },
+          {
+            "file": "FPGA.cbl",
+            "block": "term-data-entry",
+            "role": "validate and capture term"
+          },
+          {
+            "file": "FPGA.cbl",
+            "block": "calculate-it",
+            "role": "compute present value from annual worth"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "FPGA.cbl",
+            "block": "annual-worth-data-entry",
+            "code": "       annual-worth-data-entry.\n           display \"Enter annual uniform series cash flow value: \"\n                    with no advancing\n           accept aw-in\n\n      * Did the user enter a valid numeric value?\n           if function test-numval(aw-in) IS NOT EQUAL ZERO then\n              display \"Annual worth\" not-numeric\n              display spaces\n              go to annual-worth-data-entry\n           else\n              compute annual-worth = function numval(aw-in)",
+            "supports_requirement": [
+              "REQ-032"
+            ]
+          },
+          {
+            "file": "FPGA.cbl",
+            "block": "calculate-it",
+            "code": "           compute numerator = (1 + annual-interest) **\n                   annual-term - 1\n\n           compute denominator = annual-interest *\n                                 (1 + annual-interest) ** annual-term\n\n           compute PRESENT-VALUE = ANNUAL-WORTH *\n                                   (numerator / denominator)\n\n           move present-value to pv-out",
+            "supports_requirement": [
+              "REQ-032"
+            ]
+          }
+        ],
+        "rationale": "The input paragraph enforces numeric and range checks before the calculation paragraph applies the annual-worth present-value formula and stores the formatted result."
+      }
+    },
+    {
+      "id": "REQ-033",
+      "requirement": "The system shall convert present value into annual worth after validating the financial inputs and applying the annuity formula.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "FAGP.cbl",
+            "block": "display-title-screen",
+            "role": "introduce the annual worth calculator"
+          },
+          {
+            "file": "FAGP.cbl",
+            "block": "present-value-data-entry",
+            "role": "validate and capture present value"
+          },
+          {
+            "file": "FAGP.cbl",
+            "block": "interest-rate-data-entry",
+            "role": "validate and capture interest"
+          },
+          {
+            "file": "FAGP.cbl",
+            "block": "term-data-entry",
+            "role": "validate and capture term"
+          },
+          {
+            "file": "FAGP.cbl",
+            "block": "calculate-it",
+            "role": "compute annual worth from present value"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "FAGP.cbl",
+            "block": "present-value-data-entry",
+            "code": "       present-value-data-entry.\n           display \"Enter present value: \" with no advancing\n           accept pv-in\n\n      * Did the user enter a valid numeric value?\n           if function test-numval(pv-in) IS NOT EQUAL ZERO then\n              display \"Present value\" not-numeric\n              display spaces\n              go to present-value-data-entry\n           else\n              compute present-value = function numval(pv-in)\n           end-if",
+            "supports_requirement": [
+              "REQ-033"
+            ]
+          },
+          {
+            "file": "FAGP.cbl",
+            "block": "calculate-it",
+            "code": "           compute denominator = (1 + annual-interest) **\n                                   annual-term - 1\n\n           compute numerator = annual-interest *\n                                 (1 + annual-interest) ** annual-term\n\n           compute ANNUAL-WORTH  = present-value *\n                                   (numerator / denominator)\n\n           move annual-worth to aw-out",
+            "supports_requirement": [
+              "REQ-033"
+            ]
+          }
+        ],
+        "rationale": "The entry paragraphs reject invalid financial inputs, then the calculate-it paragraph computes annual worth using the formula stated in the comments and outputs the formatted annual-worth value."
+      }
+    },
+    {
+      "id": "REQ-034",
+      "requirement": "The system shall validate frequency and capacitance inputs and calculate capacitive reactance in ohms.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "CAPREACT.cbl",
+            "block": "display-title-screen",
+            "role": "introduce the capacitive reactance calculator"
+          },
+          {
+            "file": "CAPREACT.cbl",
+            "block": "frequency-data-entry",
+            "role": "validate and capture frequency"
+          },
+          {
+            "file": "CAPREACT.cbl",
+            "block": "capacitance-data-entry",
+            "role": "validate and capture capacitance"
+          },
+          {
+            "file": "CAPREACT.cbl",
+            "block": "calculate-reactance",
+            "role": "compute and display capacitive reactance"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "CAPREACT.cbl",
+            "block": "frequency-data-entry",
+            "code": "       frequency-data-entry.\n           display spaces\n           display \"Enter frequency: \" with no advancing\n           accept freq-in\n\n      * Did the user enter a valid numeric value?\n           if function test-numval(freq-in) IS NOT EQUAL ZERO then\n              display \"Frequency \" not-numeric\n              go to frequency-data-entry\n           else\n              compute f = function numval(freq-in)\n           end-if",
+            "supports_requirement": [
+              "REQ-034"
+            ]
+          },
+          {
+            "file": "CAPREACT.cbl",
+            "block": "calculate-reactance",
+            "code": "       calculate-reactance.\n           divide 1000000 into c\n           compute xc = 2 * function pi * f * c\n           divide 1 into xc\n\n           move xc to xc-out\n           display spaces\n           display \"Xc is \" xc-out \" ohms\".",
+            "supports_requirement": [
+              "REQ-034"
+            ]
+          }
+        ],
+        "rationale": "The validation blocks reject nonnumeric and zero entries, and the calculation block converts microfarads to farads before computing Xc and displaying the reactance."
+      }
+    },
+    {
+      "id": "REQ-035",
+      "requirement": "The system shall validate frequency and inductance inputs and calculate inductive reactance in ohms.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "INDREACT.cbl",
+            "block": "display-title-screen",
+            "role": "introduce the inductive reactance calculator"
+          },
+          {
+            "file": "INDREACT.cbl",
+            "block": "frequency-data-entry",
+            "role": "validate and capture frequency"
+          },
+          {
+            "file": "INDREACT.cbl",
+            "block": "inductance-data-entry",
+            "role": "validate and capture inductance"
+          },
+          {
+            "file": "INDREACT.cbl",
+            "block": "calculate-reactance",
+            "role": "compute and display inductive reactance"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "INDREACT.cbl",
+            "block": "inductance-data-entry",
+            "code": "       inductance-data-entry.\n           display \"Enter inductance in Henries: \" with no advancing\n           accept ind-in\n\n      * Did the user enter a valid numeric value?\n           if function test-numval(ind-in) IS NOT EQUAL ZERO then\n              display \"Inductance \" not-numeric\n              display spaces\n              go to inductance-data-entry\n           else\n              compute l = function numval(ind-in)\n           end-if",
+            "supports_requirement": [
+              "REQ-035"
+            ]
+          },
+          {
+            "file": "INDREACT.cbl",
+            "block": "calculate-reactance",
+            "code": "       calculate-reactance.\n      *    divide 1000000 into l\n           compute xl = 2 * function pi * f * l\n      *    divide 1 into xc\n\n           move xl to xl-out\n           display spaces\n           display \"XL is \" xl-out \" ohms\".",
+            "supports_requirement": [
+              "REQ-035"
+            ]
+          }
+        ],
+        "rationale": "The frequency and inductance entry paragraphs validate user input before the reactance paragraph applies the 2πfL computation and prints XL in ohms."
+      }
+    },
+    {
+      "id": "REQ-036",
+      "requirement": "The system shall validate principal, interest rate, and term inputs and compute the future value of a savings account.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "SAVINGS.cbl",
+            "block": "display-title-screen",
+            "role": "introduce the savings calculator"
+          },
+          {
+            "file": "SAVINGS.cbl",
+            "block": "present-value-data-entry",
+            "role": "validate and capture principal"
+          },
+          {
+            "file": "SAVINGS.cbl",
+            "block": "interest-rate-data-entry",
+            "role": "validate and capture interest"
+          },
+          {
+            "file": "SAVINGS.cbl",
+            "block": "term-data-entry",
+            "role": "validate and capture term"
+          },
+          {
+            "file": "SAVINGS.cbl",
+            "block": "calculate-it",
+            "role": "compute future value"
+          },
+          {
+            "file": "SAVINGS.cbl",
+            "block": "disp-result",
+            "role": "display the result"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "SAVINGS.cbl",
+            "block": "present-value-data-entry",
+            "code": "       present-value-data-entry.\n           display \"Enter initial investment: \" with no advancing\n           accept principal-in\n\n      * Did the user enter a valid numeric value?\n           if function test-numval(principal-in) IS NOT EQUAL ZERO then\n              display \"Principal\" not-numeric\n              display spaces\n              go to present-value-data-entry\n           else\n              compute present-value = function numval(principal-in)\n           end-if",
+            "supports_requirement": [
+              "REQ-036"
+            ]
+          },
+          {
+            "file": "SAVINGS.cbl",
+            "block": "calculate-it",
+            "code": "       calculate-it.\n\n      *****************************************************************\n      *                                                               *\n      * Savings account formula:                                      *\n      *                                                               *\n      *              F = P (1+r)^n                                    *\n      *                                                               *\n      *       F = Future Value                                        *\n      *       P = Present Value (initial investment)                  *\n      *       r = monthly-interest (rate)                             *\n      *       n = term (months)                                       *\n      *                                                               *\n      *****************************************************************\n\n           divide annual-interest by 100 giving annual-interest rounded\n           multiply 12 by annual-term giving loan-term-months\n           divide annual-interest by 12 giving monthly-interest rounded\n\n           compute denominator = (1 + monthly-interest) **\n                                                       loan-term-months\n\n           compute future-value = present-value * denominator\n\n           move future-value to fv-out",
+            "supports_requirement": [
+              "REQ-036"
+            ]
+          },
+          {
+            "file": "SAVINGS.cbl",
+            "block": "disp-result",
+            "code": "       disp-result.\n           display \"Principal: \" principal\n           display \"Interest Rate: \" interest-rate \"%\"\n           display t loan-term-out y months-out m\n           display \"Future Value: \" fv-out.",
+            "supports_requirement": [
+              "REQ-036"
+            ]
+          }
+        ],
+        "rationale": "The entry paragraphs ensure the investment values are numeric and nonzero, the calculation paragraph converts the annual rate to a monthly rate and applies compound growth, and the result paragraph prints the computed future value."
+      }
+    },
+    {
+      "id": "REQ-037",
+      "requirement": "The system shall validate old and new efficiency percentages and compute percent fuel savings.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "FUELSAVE.cbl",
+            "block": "display-title-screen",
+            "role": "introduce the fuel savings calculator"
+          },
+          {
+            "file": "FUELSAVE.cbl",
+            "block": "old-eff-data-entry",
+            "role": "validate and capture old efficiency"
+          },
+          {
+            "file": "FUELSAVE.cbl",
+            "block": "new-eff-data-entry",
+            "role": "validate and capture new efficiency"
+          },
+          {
+            "file": "FUELSAVE.cbl",
+            "block": "calculate-it",
+            "role": "compute fuel savings percentage"
+          },
+          {
+            "file": "FUELSAVE.cbl",
+            "block": "disp-result",
+            "role": "display the savings result"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "FUELSAVE.cbl",
+            "block": "old-eff-data-entry",
+            "code": "       old-eff-data-entry.\n           display \"Enter old efficiency %: \" with no advancing\n           accept old-eff-in\n\n      * Did the user enter a valid numeric value?\n           if function test-numval(old-eff-in) IS NOT EQUAL ZERO then\n              display \"Old Efficiency\" not-numeric\n              display spaces\n              go to old-eff-data-entry\n           else\n              compute oldeff = function numval(old-eff-in)\n           end-if",
+            "supports_requirement": [
+              "REQ-037"
+            ]
+          },
+          {
+            "file": "FUELSAVE.cbl",
+            "block": "calculate-it",
+            "code": "       calculate-it.\n\n      *****************************************************************\n      *                                                               *\n      * Percent Fuel Savings formula:                                 *\n      *                                                               *\n      * %FuelSavings = [(neweff - oldeff) / neweff] * 100             *\n      *                                                               *\n      *****************************************************************\n\n      *     compute pcteff = (neweff - oldeff) / neweff\n\n           subtract oldeff from neweff giving numerator\n           divide numerator by neweff giving pcteff rounded\n",
+            "supports_requirement": [
+              "REQ-037"
+            ]
+          }
+        ],
+        "rationale": "The old and new efficiency entries reject invalid data, and the calculation paragraph subtracts the efficiencies, divides by the new value, and scales by 100 to produce the fuel-savings percentage."
+      }
+    },
+    {
+      "id": "REQ-038",
+      "requirement": "The system shall validate principal, interest rate, and term inputs and calculate the monthly loan payment.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "LOANPYMT.cbl",
+            "block": "display-title-screen",
+            "role": "introduce the loan payment calculator"
+          },
+          {
+            "file": "LOANPYMT.cbl",
+            "block": "present-value-data-entry",
+            "role": "validate and capture principal"
+          },
+          {
+            "file": "LOANPYMT.cbl",
+            "block": "interest-rate-data-entry",
+            "role": "validate and capture interest"
+          },
+          {
+            "file": "LOANPYMT.cbl",
+            "block": "term-data-entry",
+            "role": "validate and capture term"
+          },
+          {
+            "file": "LOANPYMT.cbl",
+            "block": "calculate-it",
+            "role": "compute the loan payment"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "LOANPYMT.cbl",
+            "block": "present-value-data-entry",
+            "code": "       present-value-data-entry.\n           display \"Enter principal $: \" with no advancing\n           accept pv-in\n\n      * Did the user enter a valid numeric value?\n           if function test-numval(pv-in) IS NOT EQUAL ZERO then\n              display \"Principal\" not-numeric\n              display spaces\n              go to present-value-data-entry\n           else\n              compute present-value = function numval(pv-in)\n           end-if",
+            "supports_requirement": [
+              "REQ-038"
+            ]
+          },
+          {
+            "file": "LOANPYMT.cbl",
+            "block": "calculate-it",
+            "code": "       calculate-it.\n\n      *****************************************************************\n      *                                                               *\n      * Annual Worth formula:                                         *\n      *                                                               *\n      *              A = P * (i * (1+i)^n) / ((1+i)^n -1)             *\n      *                                                               *\n      *       P = Present Value                                       *\n      *       A = Annual Worth                                        *\n      *       i = annual-interest (rate)                              *\n      *       n = loan-term (years)                                   *\n      *                                                               *\n      *****************************************************************\n\n           multiply annual-term by 12 giving LOAN-TERM-MONTHS\n           divide annual-interest by 12 giving MONTHLY-INTEREST\n\n           compute denominator = (1 + monthly-interest) **\n                                   loan-term-months - 1\n\n           compute numerator = monthly-interest *\n                           (1 + monthly-interest) ** loan-term-months\n\n           compute ANNUAL-WORTH  = present-value *",
+            "supports_requirement": [
+              "REQ-038"
+            ]
+          }
+        ],
+        "rationale": "The entry paragraphs guard against nonnumeric and out-of-range inputs, and the calculation paragraph converts annual values to monthly values before applying the annuity payment formula."
+      }
+    },
+    {
+      "id": "REQ-039",
+      "requirement": "The system shall validate outdoor temperature and wind speed inputs and calculate wind chill.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "WINDCHIL.cbl",
+            "block": "display-title-screen",
+            "role": "introduce the wind chill calculator"
+          },
+          {
+            "file": "WINDCHIL.cbl",
+            "block": "outside-temp-data-entry",
+            "role": "validate and capture outdoor temperature"
+          },
+          {
+            "file": "WINDCHIL.cbl",
+            "block": "wind-speed-data-entry",
+            "role": "validate and capture wind speed"
+          },
+          {
+            "file": "WINDCHIL.cbl",
+            "block": "calculate-it",
+            "role": "compute wind chill"
+          },
+          {
+            "file": "WINDCHIL.cbl",
+            "block": "display-results",
+            "role": "display the computed wind chill"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "WINDCHIL.cbl",
+            "block": "outside-temp-data-entry",
+            "code": "       outside-temp-data-entry.\n           display spaces\n           display \"Enter outdoor dry bulb temperature in degF \"\n                    with no advancing\n           display \"(nnn.n): \" with no advancing\n           accept outside-temp-in\n\n      * Did the user enter a valid numeric value?\n           if function test-numval(outside-temp-in) IS NOT EQUAL ZERO\n           then\n              display \"Temperature \" not-numeric\n              go to outside-temp-data-entry",
+            "supports_requirement": [
+              "REQ-039"
+            ]
+          },
+          {
+            "file": "WINDCHIL.cbl",
+            "block": "calculate-it",
+            "code": "       calculate-it.\n      * Twc = 35.74 + 0.6215*Ta - 35.75*v^0.16 + 0.4275*Ta*v^0.16\n      *\n      * where:   Twc = wind chill index, degF\n      *           Ta = air temperature, degF\n      *            v = wind speed, mph\n      *\n           compute wind-chill rounded =\n                               cf1 +\n                               cf2 * outside-temp -\n                               cf3 * wind-speed ** 0.16 +\n                               cf4 * outside-temp * wind-speed ** 0.16\n\n           move wind-chill to wind-chill-out.",
+            "supports_requirement": [
+              "REQ-039"
+            ]
+          },
+          {
+            "file": "WINDCHIL.cbl",
+            "block": "display-results",
+            "code": "       display-results.\n           display spaces\n      *     display outside-temp\n           display \"Outdoor Temperature: \" outside-temp-out \" degF\"\n      *     display wind-speed\n           display \"Wind Speed: \" wind-speed-out \" MPH\"\n      *     display wind-chill\n           display \"Wind Chill: \" wind-chill-out \" degF\".",
+            "supports_requirement": [
+              "REQ-039"
+            ]
+          }
+        ],
+        "rationale": "The input blocks validate user-entered temperature and speed, then the formula block computes the wind chill index and the results block prints the formatted output."
+      }
+    },
+    {
+      "id": "REQ-040",
+      "requirement": "The system shall initialize the psychrometric humidity table and calculate enthalpy from temperature and relative humidity.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ENTHALPY.cbl",
+            "block": "display-title-screen",
+            "role": "introduce the enthalpy calculator"
+          },
+          {
+            "file": "ENTHALPY.cbl",
+            "block": "init-specific-humidity-table",
+            "role": "load the humidity table"
+          },
+          {
+            "file": "ENTHALPY.cbl",
+            "block": "temperature-data-entry",
+            "role": "validate and capture dry bulb temperature"
+          },
+          {
+            "file": "ENTHALPY.cbl",
+            "block": "relative-humidity-data-entry",
+            "role": "validate and capture relative humidity"
+          },
+          {
+            "file": "ENTHALPY.cbl",
+            "block": "calculate-enthalpy",
+            "role": "compute enthalpy and humidity ratio"
+          },
+          {
+            "file": "ENTHALPY.cbl",
+            "block": "end-program",
+            "role": "terminate the program"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ENTHALPY.cbl",
+            "block": "init-specific-humidity-table",
+            "code": "       init-specific-humidity-table.\n           display dot with no advancing\n           move 24 to specifichumidity(1)\n           display dot with no advancing\n           move 25 to specifichumidity(2)\n           display dot with no advancing\n           move 26 to specifichumidity(3)\n           display dot with no advancing\n           move 27 to specifichumidity(4)\n           display dot with no advancing\n           move 28 to specifichumidity(5)\n           display dot with no advancing\n           move 30 to specifichumidity(6)\n           display dot with no advancing\n           move 31 to specifichumidity(7)\n           display dot with no advancing\n           move 32 to specifichumidity(8)\n           display dot with no advancing",
+            "supports_requirement": [
+              "REQ-040"
+            ]
+          },
+          {
+            "file": "ENTHALPY.cbl",
+            "block": "temperature-data-entry",
+            "code": "       temperature-data-entry.\n           display spaces\n           display \"Enter dry bulb temperature (30 - 87 deg F): \"\n                    with no advancing\n           accept temp-in\n\n      * Did the user enter a valid numeric value?\n           if function test-numval(temp-in) IS NOT EQUAL ZERO then\n              display \"Temperature \" not-numeric\n              go to temperature-data-entry\n           else\n              compute temperature = function numval(temp-in)",
+            "supports_requirement": [
+              "REQ-040"
+            ]
+          },
+          {
+            "file": "ENTHALPY.cbl",
+            "block": "calculate-enthalpy",
+            "code": "       calculate-enthalpy.\n           multiply temperature by 0.24 giving ha rounded\n           subtract 29 from temperature giving table-idx\n           divide 100 into relative-humidity\n           multiply relative-humidity by specifichumidity(table-idx)\n                    giving humidityratio rounded\n\n      *     display \"Temp: \" temperature\n      *     display \"ha: \" ha\n      *     display spaces\n      *     display \"Enter humidity ratio (gr/LB) as:\"\n      *     display \"nnn\"\n      *     accept humidityratio\n\n           divide humidityratio by 7000 giving x rounded\n\n      *     display \"Converted to lb/lb: \" x\n\n           multiply temperature by 0.444 giving hw rounded\n\n      *     display \"hw: \" hw\n\n           add 1061 to hw\n\n      *     display \"hw: \" hw\n\n           multiply x by hw\n\n      *     display \"x: \" x\n      *     display \"hw: \" hw",
+            "supports_requirement": [
+              "REQ-040"
+            ]
+          }
+        ],
+        "rationale": "The initialization paragraph fills the specific-humidity table, the data-entry paragraphs enforce valid numeric values, and the calculation paragraph derives enthalpy and humidity ratio from the table values and user inputs."
+      }
+    },
+    {
+      "id": "REQ-041",
+      "requirement": "The system shall validate both pulley diameters and the belt length before calculating pulley distance and displaying the result.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PULLYDIS.cbl",
+            "block": "200-opening-screen",
+            "role": "introduce the pulley distance calculator"
+          },
+          {
+            "file": "PULLYDIS.cbl",
+            "block": "300-pulley1-data-entry",
+            "role": "validate and capture the first pulley diameter"
+          },
+          {
+            "file": "PULLYDIS.cbl",
+            "block": "400-pulley2-data-entry",
+            "role": "validate and capture the second pulley diameter"
+          },
+          {
+            "file": "PULLYDIS.cbl",
+            "block": "500-belt-length-data-entry",
+            "role": "validate and capture belt length"
+          },
+          {
+            "file": "PULLYDIS.cbl",
+            "block": "600-calculate-it",
+            "role": "compute pulley distance"
+          },
+          {
+            "file": "PULLYDIS.cbl",
+            "block": "700-display-results",
+            "role": "display the computed distance"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PULLYDIS.cbl",
+            "block": "300-pulley1-data-entry",
+            "code": "       300-pulley1-data-entry.\n           move \"pulley #1 diameter\" to description\n           display \"Enter \" description \": \" with no advancing\n           accept pulley-diameter1-in\n\n      * Did the user enter a valid numeric value?\n           if function test-numval(pulley-diameter1-in)\n              IS NOT EQUAL ZERO then\n              display \"Previous \" description not-numeric\n              perform 300-pulley1-data-entry\n           else\n              compute pulley-diameter1 =",
+            "supports_requirement": [
+              "REQ-041"
+            ]
+          },
+          {
+            "file": "PULLYDIS.cbl",
+            "block": "600-calculate-it",
+            "code": "       600-calculate-it.\n      *\n      * Belt Length Formula:\n      *    compute belt-length rounded = function pi *\n      *       (pulley-diameter1 + pulley-diameter2) * 0.5 +\n      *       (pulley-distance * 2) +\n      *       (function abs(pulley-diameter2 - pulley-diameter1) ** 2 /\n      *       (pulley-distance * 4)).\n      *\n           add pulley-diameter1 to pulley-diameter2\n                 giving pulley-diameter-sum\n\n           subtract pulley-diameter1 from pulley-diameter2\n                 giving pulley-diameter-diff\n\n           compute x rounded = (4 * belt-length) -\n                                (2 * function pi * pulley-diameter-sum)\n\n           compute numerator rounded = x + function sqrt(x ** 2 - 32 *\n                    (pulley-diameter-diff ** 2))\n\n           divide numerator by denominator\n                    giving pulley-distance rounded.",
+            "supports_requirement": [
+              "REQ-041"
+            ]
+          },
+          {
+            "file": "PULLYDIS.cbl",
+            "block": "700-display-results",
+            "code": "       700-display-results.\n           move pulley-distance to pulley-distance-out\n      *\n      *     move pulley-diameter-sum to pulley-diameter-sum-out\n      *     move pulley-diameter-diff to pulley-diameter-diff-out\n      *     move x to x-out\n      *     move numerator to numerator-out\n      *     display spaces\n      *     display \"pulley diameter sum: \" pulley-diameter-sum-out\n      *     display \"pulley diameter diff: \" pulley-diameter-diff-out",
+            "supports_requirement": [
+              "REQ-041"
+            ]
+          }
+        ],
+        "rationale": "The entry paragraphs reject invalid pulley and belt-length values, and the calculation paragraph applies the belt-length relationship to derive pulley distance before the display paragraph reports it."
+      }
+    },
+    {
+      "id": "REQ-042",
+      "requirement": "The system shall load an initial Conway's Game of Life grid from a file, display each generation, and evolve the next generation using living-neighbor rules.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "CNWYLIFE.cbl",
+            "block": "100-MAIN",
+            "role": "open the initial file and drive the generation loop"
+          },
+          {
+            "file": "CNWYLIFE.cbl",
+            "block": "110-INITIALIZE",
+            "role": "read the initial grid from the input file"
+          },
+          {
+            "file": "CNWYLIFE.cbl",
+            "block": "120-DISP-GEN",
+            "role": "display the current generation"
+          },
+          {
+            "file": "CNWYLIFE.cbl",
+            "block": "130-CONWAY-ALG",
+            "role": "apply the Conway evolution rules"
+          },
+          {
+            "file": "CNWYLIFE.cbl",
+            "block": "200-COUNT-LIVING-NEIGHBORS",
+            "role": "count adjacent live cells"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "CNWYLIFE.cbl",
+            "block": "100-MAIN",
+            "code": "       100-MAIN.\n           MOVE \"F\" TO end-of-file-flag\n           OPEN INPUT initial-condx-file\n           PERFORM 110-INITIALIZE VARYING row-counter FROM 1 BY 1\n                     UNTIL row-counter IS GREATER THAN max-rows\n           CLOSE initial-condx-file\n           PERFORM VARYING generation FROM 1 BY 1\n                    UNTIL generation IS GREATER THAN max-gen\n              PERFORM 120-DISP-GEN\n              PERFORM 130-CONWAY-ALG\n           END-PERFORM\n           STOP RUN.\n      *",
+            "supports_requirement": [
+              "REQ-042"
+            ]
+          },
+          {
+            "file": "CNWYLIFE.cbl",
+            "block": "130-CONWAY-ALG",
+            "code": "       130-CONWAY-ALG.\n      * Copy previous=generation to next-generation\n           MOVE previous-generation to next-generation\n      * Evaluate all cells in sequence, but skip boundary cells\n           PERFORM VARYING row-counter FROM 2 BY 1\n                 UNTIL row-counter IS EQUAL TO max-rows\n           PERFORM VARYING column-counter FROM 2 BY 1\n                 UNTIL column-counter IS EQUAL TO max-columns\n           MOVE ZERO TO neighbor-counter\n      * Begin counting living neighbors based on whether current cell\n      * is living or dead\n           EVALUATE pg-column (row-counter, column-counter)\n              WHEN living-cell\n                 PERFORM 210-LIVING-CELL-NEIGHBORS\n              WHEN dead-cell\n                 PERFORM 220-DEAD-CELL-NEIGHBORS\n           END-EVALUATE\n           END-PERFORM\n           END-PERFORM\n      * Copy next-generation to previous-generation for display and\n      * evaluation of next generation\n           MOVE next-generation TO previous-generation.\n      *",
+            "supports_requirement": [
+              "REQ-042"
+            ]
+          },
+          {
+            "file": "CNWYLIFE.cbl",
+            "block": "200-COUNT-LIVING-NEIGHBORS",
+            "code": "       200-COUNT-LIVING-NEIGHBORS.\n           PERFORM VARYING y FROM -1 BY 1 UNTIL y IS GREATER THAN 1\n           PERFORM VARYING x FROM -1 BY 1 UNTIL x IS GREATER THAN 1\n      * BUG: If CURRENT cell is LIVING AND\n      *      x = 0 AND y = 0\n      *      (neighbor coordinates point to current cell)\n      *      current cell gets counted as a neighbor!!!\n      * Test for x = 0 AND y = 0,\n      * if true, skip it and move on\n           IF x IS NOT EQUAL TO ZERO OR\n              y IS NOT EQUAL TO ZERO\n           THEN\n              ADD y TO row-counter GIVING neighbor-y\n              ADD x to column-counter GIVING neighbor-x\n              IF pg-column(neighbor-y, neighbor-x)\n                 IS EQUAL TO living-cell\n              THEN\n                 ADD 1 TO neighbor-counter\n              END-IF\n           END-IF\n           END-PERFORM",
+            "supports_requirement": [
+              "REQ-042"
+            ]
+          }
+        ],
+        "rationale": "The main routine opens the file and drives each generation, the initialization step loads the starting grid, and the Conway algorithm copies generations while delegating neighbor counting and cell-state updates to the dedicated paragraphs."
+      }
+    },
+    {
+      "id": "REQ-043",
+      "requirement": "The system shall seed its random generator, populate the concentration card table with random symbols, and display the table layout for play.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "concentration.cbl",
+            "block": "MAIN",
+            "role": "prepare the table size and iteration count"
+          },
+          {
+            "file": "concentration.cbl",
+            "block": "110-GENERATE-SEEDS",
+            "role": "seed the random generator"
+          },
+          {
+            "file": "concentration.cbl",
+            "block": "121-POPULATE-CARD-TABLE",
+            "role": "place symbols into empty table cells"
+          },
+          {
+            "file": "concentration.cbl",
+            "block": "130-DISPLAY-CARD-TABLE",
+            "role": "render the populated rows"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "concentration.cbl",
+            "block": "110-GENERATE-SEEDS",
+            "code": "       110-GENERATE-SEEDS.\n      *\n      * Obtain system date & time to help seed RANDOM function\n           MOVE FUNCTION CURRENT-DATE TO DATETIME\n      *\n      * Generate SEED from DATETIME\n           COMPUTE SEED = MO * DD * HH * MM * SS * HUND-SEC\n      *\n      * Lower SEED to within maximum limit for RANDOM function\n           SUBTRACT 801076519 FROM SEED\n      *\n      * Initialize seeded pseudo-random number sequences\n           COMPUTE RANDOM-SYMBOL-IDX = FUNCTION INTEGER (\n                                       FUNCTION RANDOM(SEED) * MAX)\n\n           COMPUTE RANDOM-X = FUNCTION INTEGER (\n                              FUNCTION RANDOM(SEED) * TABLE-SIZE)\n",
+            "supports_requirement": [
+              "REQ-043"
+            ]
+          },
+          {
+            "file": "concentration.cbl",
+            "block": "121-POPULATE-CARD-TABLE",
+            "code": "       121-POPULATE-CARD-TABLE.\n      * TABLE-SIZE * TABLE-SIZE NEEDS TO BE AN EVEN NUMBER FOR THIS\n      * ALGORITHM TO WORK PROPERLY.\n           PERFORM LOOP-COUNTER TIMES\n             COMPUTE RANDOM-SYMBOL-IDX = FUNCTION INTEGER (\n                                         FUNCTION RANDOM * MAX)\n             PERFORM 2 TIMES\n               COMPUTE RANDOM-X = FUNCTION INTEGER (\n                                  FUNCTION RANDOM * TABLE-SIZE)\n\n               COMPUTE RANDOM-Y = FUNCTION INTEGER (\n                                  FUNCTION RANDOM * TABLE-SIZE)\n      *\n      * If the cell in CARD-TABLE is an empty space, populate it\n      * with the random symbol\n               IF C(RANDOM-X, RANDOM-Y) IS EQUAL TO SPACE THEN\n                  MOVE SYM(RANDOM-SYMBOL-IDX) TO C(RANDOM-X, RANDOM-Y)\n               END-IF\n             END-PERFORM\n      *\n      * Remove used symbol from 1-D table\n             MOVE SPACE TO SYM(RANDOM-SYMBOL-IDX)",
+            "supports_requirement": [
+              "REQ-043"
+            ]
+          },
+          {
+            "file": "concentration.cbl",
+            "block": "130-DISPLAY-CARD-TABLE",
+            "code": "       130-DISPLAY-CARD-TABLE.\n           PERFORM VARYING IDX FROM 1 BY 1\n                   UNTIL IDX IS GREATER THAN TABLE-SIZE\n                   DISPLAY R(IDX)",
+            "supports_requirement": [
+              "REQ-043"
+            ]
+          }
+        ],
+        "rationale": "The program derives a seed from the current date and time, fills the two-dimensional table with random symbols only where empty spaces remain, and then displays the table rows."
+      }
+    },
+    {
+      "id": "REQ-044",
+      "requirement": "The system shall initialize the concentration game difficulty, build the random card table, process user coordinates, and display the blank table between moves.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "concentration3.cbl",
+            "block": "MAIN",
+            "role": "drive initialization, population, and repeated user turns"
+          },
+          {
+            "file": "concentration3.cbl",
+            "block": "105-INITIALIZE",
+            "role": "capture and validate difficulty"
+          },
+          {
+            "file": "concentration3.cbl",
+            "block": "110-GENERATE-SEEDS",
+            "role": "seed random symbol placement"
+          },
+          {
+            "file": "concentration3.cbl",
+            "block": "120-POPULATE-CARD-TABLE",
+            "role": "fill the hidden card table"
+          },
+          {
+            "file": "concentration3.cbl",
+            "block": "140-PROCESS-USER-INPUT",
+            "role": "accept and translate coordinates"
+          },
+          {
+            "file": "concentration3.cbl",
+            "block": "150-DISPLAY-BLANK-TABLE",
+            "role": "show the masked board"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "concentration3.cbl",
+            "block": "105-INITIALIZE",
+            "code": "       105-INITIALIZE.\n      *\n      * Retrieve difficulty level from user\n           PERFORM WITH TEST AFTER\n              UNTIL DIFFICULTY IS GREATER THAN ZERO AND\n                    DIFFICULTY IS LESS THAN 12\n               PERFORM WITH TEST AFTER UNTIL\n                  FUNCTION TEST-NUMVAL(DIFFICULTY-IN) IS EQUAL TO ZERO\n                  DISPLAY \"Enter Difficulty Level (1-11): \"\n                  ACCEPT DIFFICULTY-IN\n      *            DISPLAY DIFFICULTY-IN\n               END-PERFORM\n               COMPUTE DIFFICULTY = FUNCTION NUMVAL(DIFFICULTY-IN)\n           END-PERFORM\n      *     DISPLAY \"DIFFICULTY: \" DIFFICULTY\n      *\n      * Set TABLE-SIZE based on the value stored in DIFFICULTY\n           ADD 2 TO DIFFICULTY GIVING TABLE-SIZE\n      *\n      *     ******************** CAUTION ********************\n      * The PERFORM UNTIL statements (DO...UNTIL LOOP) in other\n      * paragraphs can create infinite loops if the LOOP-COUNTER\n      * calculation within this paragraph is incorrect!\n      *",
+            "supports_requirement": [
+              "REQ-044"
+            ]
+          },
+          {
+            "file": "concentration3.cbl",
+            "block": "140-PROCESS-USER-INPUT",
+            "code": "       140-PROCESS-USER-INPUT.\n      *\n      * This paragraph processes the user's alphanumeric coordinates\n      * into X,Y numeric table coordinates.  It then uses those numeric\n      * table coordinates to retrieve the two symbols stored in those\n      * locations of CARD-TABLE.  Those two symbols are stored in\n      * corresponding locations of BLANK-TABLE for display.  Then, the\n      * two symbols are compared for equality.\n      *\n           MOVE \"N\" TO INPUT-VALIDITY\n           DISPLAY \"Coordinate #1: \"\n           ACCEPT LOCATION-1-COORD\n           DISPLAY \"Coordinate #2: \"\n           ACCEPT LOCATION-2-COORD\n      *\n      * Display input coordinates for debugging purposes\n      *     DISPLAY \"Coordinate #1: \" LOCATION-1-COORD\n      *     DISPLAY \"Coordinate #2: \" LOCATION-2-COORD\n           MOVE FUNCTION UPPER-CASE(LOCATION-1-COORD) TO\n                 LOCATION-1-COORD\n           MOVE FUNCTION UPPER-CASE(LOCATION-2-COORD) TO\n                 LOCATION-2-COORD",
+            "supports_requirement": [
+              "REQ-044"
+            ]
+          },
+          {
+            "file": "concentration3.cbl",
+            "block": "150-DISPLAY-BLANK-TABLE",
+            "code": "       150-DISPLAY-BLANK-TABLE.\n           DISPLAY SPACES\n           DISPLAY \"   \" ALPHA-BET-HEADER\n           DISPLAY \"  +\" LINE-HEADER \"+\"\n           PERFORM VARYING IDX FROM 1 BY 1\n                    UNTIL IDX IS GREATER THAN TABLE-SIZE\n                    MOVE IDX TO IDX-OUT\n                    DISPLAY IDX-OUT \"|\" R IN BLANK-TABLE(IDX) \"|\"\n           END-PERFORM\n           DISPLAY \"  +\" LINE-HEADER \"+\"\n           DISPLAY SPACES.\n      *\n      * 130-LOG-CARD-TABLE.\n      *\n      * This paragraph displays the contents of CARD-TABLE with row\n      * and column headers on the screen and/OR writes the contents to\n      * an output file\n      *     DISPLAY \"DIFFICULTY: \" DIFFICULTY\n      *     STRING \"DIFFICULTY: \" DIFFICULTY DELIMITED BY SIZE\n      *              INTO WS-CARD-TABLE-RECORD",
+            "supports_requirement": [
+              "REQ-044"
+            ]
+          }
+        ],
+        "rationale": "The initialization paragraph constrains difficulty to the valid range, the random seeding and table population paragraphs build the hidden board, and the user-input and blank-table paragraphs handle each turn of play."
+      }
+    },
+    {
+      "id": "REQ-045",
+      "requirement": "The system shall validate return air, mixed air, and outside air values before calculating the outside air percentage.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "MIXEDAIR.cbl",
+            "block": "display-title-screen",
+            "role": "introduce the mixed air calculator"
+          },
+          {
+            "file": "MIXEDAIR.cbl",
+            "block": "return-air-data-entry",
+            "role": "validate and capture return air"
+          },
+          {
+            "file": "MIXEDAIR.cbl",
+            "block": "mixed-air-data-entry",
+            "role": "validate and capture mixed air"
+          },
+          {
+            "file": "MIXEDAIR.cbl",
+            "block": "outside-air-data-entry",
+            "role": "validate and capture outside air"
+          },
+          {
+            "file": "MIXEDAIR.cbl",
+            "block": "calculate-pct-oa",
+            "role": "compute outside air percentage"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "MIXEDAIR.cbl",
+            "block": "return-air-data-entry",
+            "code": "       return-air-data-entry.\n           display spaces\n           display \"Enter return air (deg/ppm): \"\n                    with no advancing\n           accept return-air-in\n\n      * Did the user enter a valid numeric value?\n           if function test-numval(return-air-in) IS NOT EQUAL ZERO then\n              display \"Return air \" not-numeric\n              go to return-air-data-entry\n           else\n              compute return-air = function numval(return-air-in)",
+            "supports_requirement": [
+              "REQ-045"
+            ]
+          },
+          {
+            "file": "MIXEDAIR.cbl",
+            "block": "calculate-pct-oa",
+            "code": "       calculate-pct-oa.\n           subtract mixed-air from return-air giving numerator\n           subtract outside-air from return-air giving denominator\n           divide numerator by denominator giving pct-oa rounded\n           multiply 100 by pct-oa\n\n           move pct-oa to pct-oa-out\n           display spaces\n           display \"Outside Air %: \" pct-oa-out.",
+            "supports_requirement": [
+              "REQ-045"
+            ]
+          }
+        ],
+        "rationale": "The entry paragraphs reject invalid or zero values, and the calculation paragraph subtracts the air streams, divides the result, and scales it to a percentage."
+      }
+    },
+    {
+      "id": "REQ-046",
+      "requirement": "The system shall validate thermistor resistance input and calculate the corresponding temperature using the polynomial conversion formula.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "RES2TEMP.cbl",
+            "block": "MAIN-PARA",
+            "role": "run the opening screen, data entry, and temperature calculation"
+          },
+          {
+            "file": "RES2TEMP.cbl",
+            "block": "DATA-ENTRY",
+            "role": "validate and capture sensor resistance"
+          },
+          {
+            "file": "RES2TEMP.cbl",
+            "block": "CALCULATE-TEMPERATURE",
+            "role": "apply the resistance-to-temperature formula"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "RES2TEMP.cbl",
+            "block": "DATA-ENTRY",
+            "code": "       DATA-ENTRY.\n           DISPLAY SPACES\n           DISPLAY \"Enter sensor resistance: \" WITH NO ADVANCING\n           ACCEPT USER-INPUT\n      *\n      * Did the user enter an invalid numeric value?\n           IF FUNCTION TEST-NUMVAL(USER-INPUT) IS NOT EQUAL ZERO THEN\n              DISPLAY \"Sensor Resistance\" not-numeric\n              MOVE 'F' TO VALID-NUMBER-FLAG\n           ELSE\n              COMPUTE SENSOR-RESISTANCE = FUNCTION NUMVAL(USER-INPUT)\n           END-IF\n      *\n           IF SENSOR-RESISTANCE IS EQUAL ZERO THEN\n              GO TO END-PROGRAM\n           END-IF\n      *\n           IF SENSOR-RESISTANCE > MAX-VAL THEN",
+            "supports_requirement": [
+              "REQ-046"
+            ]
+          },
+          {
+            "file": "RES2TEMP.cbl",
+            "block": "CALCULATE-TEMPERATURE",
+            "code": "       CALCULATE-TEMPERATURE.\n      *\n      * The following Python3 formula was derived from the sensor\n      * specification sheet of a 3Kohm@77F NTC thermistor:\n      *\n      * x is the sensor resistance\n      * yF is the calculated temperature in degF\n      *\n      * yF = 8.5557106e-23 * math.pow(x,6) -\n      *      5.68981649695e-18 * math.pow(x,5) +\n      *      1.50180247230692e-13 * math.pow(x,4) -\n      *      2.01541522576944e-9 * math.pow(x,3) +\n      *      1.47906738776888e-5 * math.pow(x,2) -\n      *      6.2591776279401e-2 * x +\n      *      1.74508163989243e2\n      *\n           COMPUTE DEG-F = 8.5557106 * FUNCTION EXP10(-23) *\n                           SENSOR-RESISTANCE ** 6 -",
+            "supports_requirement": [
+              "REQ-046"
+            ]
+          }
+        ],
+        "rationale": "The main routine loops through validated resistance entry, and the calculation paragraph uses the documented polynomial to convert resistance into degrees Fahrenheit."
+      }
+    },
+    {
+      "id": "REQ-047",
+      "requirement": "The system shall show instructions, initialize the maze boundaries and random obstacles, and enter the main chase loop.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ESCAPE.cbl",
+            "block": "100-primary",
+            "role": "start the game flow"
+          },
+          {
+            "file": "ESCAPE.cbl",
+            "block": "120-instructions-prompt",
+            "role": "ask whether to display instructions"
+          },
+          {
+            "file": "ESCAPE.cbl",
+            "block": "210-initialization-paragraph",
+            "role": "build walls and place obstacles"
+          },
+          {
+            "file": "ESCAPE.cbl",
+            "block": "220-main-paragraph",
+            "role": "display the field and move player and robots"
+          },
+          {
+            "file": "ESCAPE.cbl",
+            "block": "130-pursuers-prompt",
+            "role": "validate the number of pursuers"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ESCAPE.cbl",
+            "block": "120-instructions-prompt",
+            "code": "       120-instructions-prompt.\n           display \"Would you like instructions (Y/N)? \"\n                    with no advancing\n           accept player-in\n           move function lower-case(player-in) to player-in\n\n           EVALUATE true\n               WHEN player-in = 'y'\n                  perform 121-instructions\n               WHEN OTHER\n                  CONTINUE",
+            "supports_requirement": [
+              "REQ-047"
+            ]
+          },
+          {
+            "file": "ESCAPE.cbl",
+            "block": "210-initialization-paragraph",
+            "code": "       210-initialization-paragraph.\n           perform 211-build-north-south-walls varying x from 1 by 1\n                                         until x is equal to max-x + 1\n\n           perform 212-build-east-west-walls varying y from 1 by 1\n                                         until y is equal to max-y + 1\n\n           move function current-date to datetime\n      *\n      * Comment out the next two display lines after debugging\n           display datetime\n           display datetime-label\n           divide hund-sec by 1000 giving factor\n           perform 213-place-random-obstacles varying x from 2 by 1\n                                             until x is equal to max-x\n                                             after y from 2 by 1\n                                             until y is equal to max-y.\n",
+            "supports_requirement": [
+              "REQ-047"
+            ]
+          },
+          {
+            "file": "ESCAPE.cbl",
+            "block": "220-main-paragraph",
+            "code": "       220-main-paragraph.\n           perform 420-display-playing-field\n           perform 440-players-move\n           move zero to n\n           perform 450-robots-move\n                   varying n from 1 by 1\n                   until n is equal to pursuers + 1.\n\n      * 200-exit-main SECTION.\n\n      * 300-terminating SECTION.",
+            "supports_requirement": [
+              "REQ-047"
+            ]
+          }
+        ],
+        "rationale": "The prompt and instruction paragraphs control the player's setup, the initialization paragraph constructs the maze boundaries and obstacles, and the main paragraph hands control to the play loop."
+      }
+    },
+    {
+      "id": "REQ-048",
+      "requirement": "The system shall initialize the forest grid, display simulation parameters, and evolve each generation according to burning, tree, and empty-cell rules.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "FRSTFIRE.cbl",
+            "block": "100-MAIN",
+            "role": "run initialization, display parameters, and iterate generations"
+          },
+          {
+            "file": "FRSTFIRE.cbl",
+            "block": "110-INITIALIZE",
+            "role": "seed the simulation and fill the grid"
+          },
+          {
+            "file": "FRSTFIRE.cbl",
+            "block": "111-DISP-PARMS",
+            "role": "display the configured probabilities"
+          },
+          {
+            "file": "FRSTFIRE.cbl",
+            "block": "130-EVOLVE-NG",
+            "role": "scan the grid and evolve cell states"
+          },
+          {
+            "file": "FRSTFIRE.cbl",
+            "block": "131-EVOLVE-BURNING-CELL",
+            "role": "turn burning cells into empty cells"
+          },
+          {
+            "file": "FRSTFIRE.cbl",
+            "block": "132-EVOLVE-TREE-CELL",
+            "role": "ignite trees based on neighbors and probability"
+          },
+          {
+            "file": "FRSTFIRE.cbl",
+            "block": "133-EVOLVE-EMPTY-CELL",
+            "role": "grow new trees probabilistically"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "FRSTFIRE.cbl",
+            "block": "110-INITIALIZE",
+            "code": "       110-INITIALIZE.\n      *\n      * Randomzize using system time\n           MOVE FUNCTION current-date TO datetime\n           STRING hund-sec ss mm hh\n                    DELIMITED BY SIZE\n                    INTO seed\n           END-STRING\n           MOVE seed TO random-seed\n           MOVE hund-sec to hs\n           DIVIDE hs by 1000 GIVING factor\n           COMPUTE random-num = FUNCTION RANDOM(random-seed)\n      *\n           PERFORM VARYING row-counter FROM 2 BY 1\n                    UNTIL row-counter IS EQUAL TO  max-rows\n              PERFORM VARYING column-counter FROM 2 BY 1\n                       UNTIL column-counter IS EQUAL TO max-columns\n      *\n      * Populate orchard\n                 PERFORM 210-CALCULATE-PROB\n                 IF random-num IS LESS THAN init-prob THEN\n                    MOVE tree TO pg-column (row-counter, column-counter)\n                 END-IF\n              END-PERFORM",
+            "supports_requirement": [
+              "REQ-048"
+            ]
+          },
+          {
+            "file": "FRSTFIRE.cbl",
+            "block": "130-EVOLVE-NG",
+            "code": "       130-EVOLVE-NG.\n      *\n      * Copy contents of previous generation to next generation\n      *     MOVE previous-generation TO next-generation\n      *\n      * EVOLVE AS FOLLOWS:\n      *\n      * 1. A burning cell turns into an empty cell\n      * 2. A tree will burn if at least one neighbor is burning\n      * 3. A tree ignites with probability   f   even if no neighbor is\n      *    burning\n      * 4. An empty space fills with a tree with probability   p\n      *\n           PERFORM VARYING row-counter FROM 1 BY 1\n                    UNTIL row-counter IS GREATER THAN max-rows\n              PERFORM VARYING column-counter FROM 1 BY 1\n                       UNTIL column-counter IS GREATER THAN max-columns\n                 MOVE ZERO TO neighbor-counter\n                 EVALUATE pg-column(row-counter, column-counter)\n                    WHEN burning\n                       PERFORM 131-EVOLVE-BURNING-CELL\n                    WHEN tree\n                       PERFORM 132-EVOLVE-TREE-CELL\n                    WHEN empty\n                       PERFORM 133-EVOLVE-EMPTY-CELL\n                 END-EVALUATE\n              END-PERFORM",
+            "supports_requirement": [
+              "REQ-048"
+            ]
+          },
+          {
+            "file": "FRSTFIRE.cbl",
+            "block": "200-COUNT-BURNING-NEIGHBORS",
+            "code": "       200-COUNT-BURNING-NEIGHBORS.\n           PERFORM VARYING y FROM -1 BY 1 UNTIL y IS GREATER THAN 1\n              PERFORM VARYING x FROM -1 BY 1 UNTIL x IS GREATER THAN 1\n      * Test for x = 0 AND y = 0 (current cell),\n      * If true, skip it and move on\n                 IF x IS NOT EQUAL TO ZERO OR\n                    y IS NOT EQUAL TO ZERO\n                 THEN\n                    ADD y TO row-counter GIVING neighbor-y\n                    ADD x TO column-counter GIVING neighbor-X\n                    EVALUATE TRUE\n                       WHEN pg-column(neighbor-y, neighbor-x)\n                             IS EQUAL TO burning\n                             ADD 1 TO neighbor-counter\n                    END-EVALUATE\n                 END-IF\n              END-PERFORM",
+            "supports_requirement": [
+              "REQ-048"
+            ]
+          }
+        ],
+        "rationale": "The initialization paragraph seeds the grid from current time, the display paragraph prints the probability settings, and the evolution paragraphs implement the three-state forest-fire rules with neighbor counting and probability checks."
+      }
+    },
+    {
+      "id": "REQ-049",
+      "requirement": "The system shall collect initial and new domestic hot water parameters, then display the savings report using the updated values.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "DHWSAVE.cbl",
+            "block": "MAIN-PARA",
+            "role": "run opening screen, setup, reporting, and exit"
+          },
+          {
+            "file": "DHWSAVE.cbl",
+            "block": "2-INIT-DATA-ENTRY",
+            "role": "collect initial operating parameters"
+          },
+          {
+            "file": "DHWSAVE.cbl",
+            "block": "3-NEW-DATA-ENTRY",
+            "role": "collect updated operating parameters"
+          },
+          {
+            "file": "DHWSAVE.cbl",
+            "block": "21-CW-TEMP",
+            "role": "validate cold water temperature"
+          },
+          {
+            "file": "DHWSAVE.cbl",
+            "block": "22-INIT-FUEL",
+            "role": "validate initial fuel type"
+          },
+          {
+            "file": "DHWSAVE.cbl",
+            "block": "25-INIT-SHOWER-TIME",
+            "role": "validate initial shower time"
+          },
+          {
+            "file": "DHWSAVE.cbl",
+            "block": "32-NEW-FUEL",
+            "role": "validate new fuel type"
+          },
+          {
+            "file": "DHWSAVE.cbl",
+            "block": "33-NEW-HW-TEMP",
+            "role": "validate new hot water temperature"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "DHWSAVE.cbl",
+            "block": "1-OPENING-SCREEN",
+            "code": "       1-OPENING-SCREEN.\n           DISPLAY SPACES\n           DISPLAY \"** Domestic Hot Water Savings Calculator BEGINS **\"\n           DISPLAY \"Written by, Clifford A. Chipman, EMIT\"\n           DISPLAY \"January 30, 2021\"\n           DISPLAY SPACES\n           DISPLAY \"in Enterprise COBOL v6.3 for z/OS\"\n           DISPLAY SPACES\n           DISPLAY \"Enter ZERO for any parameter to end the program.\"\n           DISPLAY SPACES.\n      *",
+            "supports_requirement": [
+              "REQ-049"
+            ]
+          },
+          {
+            "file": "DHWSAVE.cbl",
+            "block": "2-INIT-DATA-ENTRY",
+            "code": "       2-INIT-DATA-ENTRY.\n           PERFORM 21-CW-TEMP\n           PERFORM 22-INIT-FUEL\n           PERFORM 23-INIT-HW-TEMP\n           PERFORM 24-INIT-FLOW-RATE\n           PERFORM 25-INIT-SHOWER-TIME\n           PERFORM 26-INIT-COMB-EFF.\n      *",
+            "supports_requirement": [
+              "REQ-049"
+            ]
+          },
+          {
+            "file": "DHWSAVE.cbl",
+            "block": "32-NEW-FUEL",
+            "code": "       32-NEW-FUEL.\n           PERFORM 998-FUEL-MENU\n           DISPLAY \"Enter new fuel type: \" WITH NO ADVANCING\n           ACCEPT USER-INPUT\n      *\n      * DID THE USER ENTER A VALID NUMERIC VALUE?\n      *\n           IF FUNCTION TEST-NUMVAL(USER-INPUT) IS NOT EQUAL ZERO THEN\n              EVALUATE TRUE\n                WHEN USER-INPUT = \"E\" OR USER-INPUT = \"e\"\n                     MOVE 1 TO NEW-FUEL\n      *\n                WHEN USER-INPUT = \"N\" OR USER-INPUT = \"n\"\n                     MOVE 2 TO NEW-FUEL\n      *\n                WHEN USER-INPUT = \"P\" OR USER-INPUT = \"p\"\n                     MOVE 3 TO NEW-FUEL\n      *\n                WHEN OTHER\n                     DISPLAY \"Menu selection\" NOT-NUMERIC",
+            "supports_requirement": [
+              "REQ-049"
+            ]
+          }
+        ],
+        "rationale": "The program first gathers and validates the baseline parameters, then gathers the new parameters, and finally proceeds through the reporting steps that produce the savings output."
+      }
+    },
+    {
+      "id": "REQ-050",
+      "requirement": "The system shall generate a random die roll from the current time and display the matching ASCII die face.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ROLL.cbl",
+            "block": "100-main-para",
+            "role": "call the title screen, roll, and display logic"
+          },
+          {
+            "file": "ROLL.cbl",
+            "block": "120-roll-the-die",
+            "role": "derive a pseudo-random cast value"
+          },
+          {
+            "file": "ROLL.cbl",
+            "block": "130-display-die",
+            "role": "select the matching die art"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ROLL.cbl",
+            "block": "120-roll-the-die",
+            "code": "       120-roll-the-die.\n           move function current-date to datetime\n           compute random-num-in = function random(hund-sec)\n           multiply 6 by random-num-in giving cast\n           add 1 to cast.",
+            "supports_requirement": [
+              "REQ-050"
+            ]
+          },
+          {
+            "file": "ROLL.cbl",
+            "block": "130-display-die",
+            "code": "       130-display-die.\n           evaluate cast\n              when 1\n                 perform one\n              when 2\n                 perform two\n              when 3\n                 perform three\n              when 4\n                 perform four\n              when 5\n                 perform five\n              when 6\n                 perform six\n              when other\n                 display \"Oops! This wasn't supposed to happen!\"",
+            "supports_requirement": [
+              "REQ-050"
+            ]
+          }
+        ],
+        "rationale": "The main paragraph chains the title, roll, and display logic; the roll paragraph derives a die value from the current time, and the display paragraph chooses the corresponding face representation."
+      }
+    },
+    {
+      "id": "REQ-051",
+      "requirement": "The system shall roll a die using time-based randomness and display the full six-face ASCII art output.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ROLLDICE.cbl",
+            "block": "100-main-para",
+            "role": "invoke the title, roll, and display paragraphs"
+          },
+          {
+            "file": "ROLLDICE.cbl",
+            "block": "120-roll-the-die",
+            "role": "derive a pseudo-random die value"
+          },
+          {
+            "file": "ROLLDICE.cbl",
+            "block": "130-display-die",
+            "role": "render the selected ASCII face"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ROLLDICE.cbl",
+            "block": "120-roll-the-die",
+            "code": "       120-roll-the-die.\n           move function current-date to datetime\n           compute random-num-in = function random(hund-sec)\n           multiply 6 by random-num-in giving cast\n           add 1 to cast.",
+            "supports_requirement": [
+              "REQ-051"
+            ]
+          },
+          {
+            "file": "ROLLDICE.cbl",
+            "block": "130-display-die",
+            "code": "       130-display-die.\n           perform varying counter from 1 by 1 until last-row\n                 evaluate cast\n                    when 1\n                         display die-side-one(counter)\n                    when 2\n                         display die-side-two(counter)\n                    when 3\n                         display die-side-three(counter)\n                    when 4\n                         display die-side-four(counter)\n                    when 5\n                         display die-side-five(counter)\n                    when 6\n                         display die-side-six(counter)\n                    when other\n                       display \"Oops! This wasn't supposed to happen!\"\n                 end-evaluate",
+            "supports_requirement": [
+              "REQ-051"
+            ]
+          }
+        ],
+        "rationale": "The roll paragraph seeds the cast from the current time, and the display paragraph iterates through the rows of the selected die-face table to print the ASCII art."
+      }
+    },
+    {
+      "id": "REQ-052",
+      "requirement": "The system shall reverse the credit-card number, separate odd and even digits, and report whether the number passes the Luhn check.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "LUHN.cbl",
+            "block": "100-MAIN",
+            "role": "extract the check digit and reverse the number"
+          },
+          {
+            "file": "LUHN.cbl",
+            "block": "200-LUHN",
+            "role": "separate odd and even digits and compute the checksum"
+          },
+          {
+            "file": "LUHN.cbl",
+            "block": "300-SHOW-RESULTS",
+            "role": "display the validation result"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "LUHN.cbl",
+            "block": "100-MAIN",
+            "code": "       100-MAIN.\n      *\n      * EXTRACT CHECK-DIGIT FROM CREDIT CARD NUMBER\n           MOVE CC-NUM (16:1) TO CHECK-DIGIT.\n      *\n      * REVERSE CREDIT CARD NUMBER & FEED IT INTO THE LUHN ALGORITHM\n           MOVE FUNCTION REVERSE(CC-NUM) TO TEST-NUM\n           PERFORM 200-LUHN\n           PERFORM 300-SHOW-RESULTS\n           STOP RUN.\n      *",
+            "supports_requirement": [
+              "REQ-052"
+            ]
+          },
+          {
+            "file": "LUHN.cbl",
+            "block": "200-LUHN",
+            "code": "       200-LUHN.\n      *\n           MOVE 1 TO ODD-IDX\n           MOVE 1 TO EVEN-IDX\n      *\n      * EXTRACT ODD AND EVEN DIGITS\n           PERFORM VARYING DIGIT-COUNTER FROM 1 BY 1\n                   UNTIL DIGIT-COUNTER IS GREATER THAN 16\n              IF FUNCTION MOD(DIGIT-COUNTER 2) IS EQUAL TO ZERO THEN\n                 MOVE TEST-NUM(DIGIT-COUNTER:1)\n                    TO EVEN-DIGIT(EVEN-IDX)\n                 ADD 1 TO EVEN-IDX\n              ELSE\n                 MOVE TEST-NUM(DIGIT-COUNTER:1)\n                    TO ODD-DIGIT(ODD-IDX)\n                 ADD ODD-DIGIT(ODD-IDX) TO CHECKSUM\n                 ADD 1 TO ODD-IDX\n              END-IF\n           END-PERFORM\n      *\n      * DOUBLE THE EVEN-DIGITS & EXTRACT THE SUM OF THE DOUBLE'S DIGITS\n           PERFORM VARYING EVEN-IDX FROM 1 BY 1\n                    UNTIL EVEN-IDX IS GREATER THAN 8\n              MULTIPLY EVEN-DIGIT(EVEN-IDX) BY 2\n                 GIVING DBL-DIGIT(EVEN-IDX)",
+            "supports_requirement": [
+              "REQ-052"
+            ]
+          },
+          {
+            "file": "LUHN.cbl",
+            "block": "300-SHOW-RESULTS",
+            "code": "           IF PASS THEN\n              DISPLAY \" VALID\"\n           ELSE\n              DISPLAY \" INVALID\"\n           END-IF.",
+            "supports_requirement": [
+              "REQ-052"
+            ]
+          }
+        ],
+        "rationale": "The main paragraph reverses the input number and hands it to the Luhn paragraph, which splits the digits and builds the checksum, and the results paragraph prints whether the number is valid or invalid."
+      }
+    },
+    {
+      "id": "REQ-053",
+      "requirement": "The system shall clear the board, generate random digits, allow the player to place them, and score the resulting number when the board is full.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "BIGNUM.cbl",
+            "block": "100-main-paragraph",
+            "role": "start the game loop and set the play-again state"
+          },
+          {
+            "file": "BIGNUM.cbl",
+            "block": "120-conditional",
+            "role": "clear tables and prepare a new round"
+          },
+          {
+            "file": "BIGNUM.cbl",
+            "block": "400-obtain-random-number",
+            "role": "derive a random digit from the current time"
+          },
+          {
+            "file": "BIGNUM.cbl",
+            "block": "500-fill-board-tables-loop",
+            "role": "populate the board with random digits"
+          },
+          {
+            "file": "BIGNUM.cbl",
+            "block": "710-place-numbers",
+            "role": "let the player place each digit"
+          },
+          {
+            "file": "BIGNUM.cbl",
+            "block": "800-board-full",
+            "role": "assemble the final number and calculate reward"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "BIGNUM.cbl",
+            "block": "120-conditional",
+            "code": "       120-conditional.\n      * perform 200 through 300 while bet < minimum-bet OR bet > wallet\n           perform 200-clear-tables-loop\n           perform 300-place-your-bet\n           perform 400-obtain-random-number\n           perform 500-fill-board-tables-loop\n      *\n      * Initialize more flags:\n      * Set occupied to FALSE\n      * Set go-back to FALSE\n           move \"n\" to occupied-flag\n           move \"n\" to go-back-flag\n      *\n           display \"The board currently looks like:\"\n           perform 600-display-board\n           perform 700-player-places-numbers-loop\n      *\n      * Sort random number into biggest number\n           sort biggest-num descending\n      *\n           perform 800-board-full.",
+            "supports_requirement": [
+              "REQ-053"
+            ]
+          },
+          {
+            "file": "BIGNUM.cbl",
+            "block": "710-place-numbers",
+            "code": "       710-place-numbers.\n           display spaces\n           display \"The number is: \" board-num(table-idx).\n           display \"Specify a column (a-e): \" with no advancing\n           accept player-in\n           move function lower-case(player-in) to player-in\n\n           evaluate true\n           when player-in is equal to \"a\"\n                if player-num(1) IS EQUAL TO space then\n                   move board-num(table-idx) to player-num(1)\n                else\n                   display occupied-msg\n                   go to 710-place-numbers\n                end-if\n\n           when player-in is equal to \"b\"\n                if player-num(2) IS EQUAL TO space then\n                   move board-num(table-idx) to player-num(2)\n                else\n                   display occupied-msg\n                   go to 710-place-numbers\n                end-if\n\n           when player-in is equal to \"c\"",
+            "supports_requirement": [
+              "REQ-053"
+            ]
+          },
+          {
+            "file": "BIGNUM.cbl",
+            "block": "800-board-full",
+            "code": "       800-board-full.\n           perform 810-move-alpha-to-numeric-loop varying table-idx\n                   from 1 by 1 until table-idx = 6\n\n           perform 820-move-table-digits-to-num\n\n           display spaces\n           display \"The board is full.\"\n           display \"Your number is: \" with no advancing\n           display playernum\n           display spaces\n           display \"The biggest number is: \" with no advancing\n           display biggestnum\n\n           perform 830-calculate-reward\n\n           if reward is greater than zero then\n              display \"You won \" reward-out\n           end-if",
+            "supports_requirement": [
+              "REQ-053"
+            ]
+          }
+        ],
+        "rationale": "The round setup clears the tables and prepares the flags, random digits are generated from the time-based seed, the player places each number into a chosen column, and the board-full paragraph combines the numbers and computes the reward."
+      }
+    },
+    {
+      "id": "REQ-054",
+      "requirement": "The system shall initialize the elevator car display, accept floor commands, and keep looping until the open command is entered.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ELEVATOR.cbl",
+            "block": "MAIN",
+            "role": "initialize the car and drive the command loop"
+          },
+          {
+            "file": "ELEVATOR.cbl",
+            "block": "120-INITIALIZE-ELEVATOR-CAR",
+            "role": "build the floor graphic from the chosen command"
+          },
+          {
+            "file": "ELEVATOR.cbl",
+            "block": "100-DISPLAY-CLOSED-ELEVATOR",
+            "role": "show the closed car graphic"
+          },
+          {
+            "file": "ELEVATOR.cbl",
+            "block": "110-DISPLAY-OPEN-ELEVATOR",
+            "role": "show the open car graphic"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ELEVATOR.cbl",
+            "block": "MAIN",
+            "code": "       MAIN.\n      * You get in on the first floor:\n           MOVE 1 TO CURRENT-FLOOR\n           MOVE CURRENT-FLOOR TO ELEVATOR-CMD\n           PERFORM 120-INITIALIZE-ELEVATOR-CAR\n           PERFORM WITH TEST AFTER UNTIL ELEVATOR-CMD IS EQUAL TO 'O'\n              DISPLAY \"You are currently on floor #\" CURRENT-FLOOR\n              DISPLAY \"Please press an elevator button to continue: (1-\"\n              \"9 or [O]pen)\"\n              ACCEPT ELEVATOR-CMD\n              EVALUATE TRUE\n              WHEN ELEVATOR-CMD IS ALPHABETIC\n                 MOVE FUNCTION UPPER-CASE(ELEVATOR-CMD) TO ELEVATOR-CMD\n                 IF ELEVATOR-CMD IS EQUAL TO 'O' THEN\n                      DISPLAY SPACES\n                      PERFORM 110-DISPLAY-OPEN-ELEVATOR\n                      DISPLAY 'Elevator car is open. Returning to z/OS.'\n                 END-IF\n\n              WHEN ELEVATOR-CMD IS NUMERIC AND\n                   ELEVATOR-CMD IS GREATER THAN ZERO\n                 PERFORM 120-INITIALIZE-ELEVATOR-CAR\n                 PERFORM 100-DISPLAY-CLOSED-ELEVATOR\n                 DISPLAY SPACES\n                 EVALUATE TRUE\n                 WHEN DESIRED-FLOOR IS GREATER THAN TOP-FLOOR OR\n                      DESIRED-FLOOR IS LESS THAN BOTTOM-FLOOR\n                    DISPLAY \"Those floors are not available from this\"\n                             \"elevator.\"\n                 WHEN DESIRED-FLOOR IS EQUAL TO CURRENT-FLOOR",
+            "supports_requirement": [
+              "REQ-054"
+            ]
+          },
+          {
+            "file": "ELEVATOR.cbl",
+            "block": "120-INITIALIZE-ELEVATOR-CAR",
+            "code": "       120-INITIALIZE-ELEVATOR-CAR.\n                 MOVE ELEVATOR-CMD TO DESIRED-FLOOR\n                 MOVE DESIRED-FLOOR TO\n                      FLOOR-NUMBER IN FLOOR-NUMBER-GRAPHIC\n                 MOVE FLOOR-NUMBER-GRAPHIC TO\n                      FLOOR-GRAPHIC IN OPEN-ELEVATOR-CAR.",
+            "supports_requirement": [
+              "REQ-054"
+            ]
+          },
+          {
+            "file": "ELEVATOR.cbl",
+            "block": "100-DISPLAY-CLOSED-ELEVATOR",
+            "code": "       100-DISPLAY-CLOSED-ELEVATOR.\n              PERFORM VARYING LOOP-COUNTER FROM 1 BY 1\n                      UNTIL LOOP-COUNTER IS GREATER THAN 7\n                 DISPLAY CLOSED-CAR(LOOP-COUNTER)",
+            "supports_requirement": [
+              "REQ-054"
+            ]
+          }
+        ],
+        "rationale": "The main routine initializes the car on floor one and loops on user commands until the open command appears, while the display and initialization paragraphs update the elevator graphics for each command."
+      }
+    },
+    {
+      "id": "REQ-055",
+      "requirement": "The system shall validate outdoor temperature and humidity, then compute a heat index with the appropriate formula adjustments and display the corresponding advisory warning.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "HEATINDX.cbl",
+            "block": "MAIN-PARA",
+            "role": "entry point"
+          },
+          {
+            "file": "HEATINDX.cbl",
+            "block": "OUTSIDE-TEMP-DATA-ENTRY",
+            "role": "validate outdoor temperature"
+          },
+          {
+            "file": "HEATINDX.cbl",
+            "block": "RELATIVE-HUMIDITY-DATA-ENTRY",
+            "role": "validate relative humidity"
+          },
+          {
+            "file": "HEATINDX.cbl",
+            "block": "CALCULATE-IT",
+            "role": "compute simple index, regression, and adjustments"
+          },
+          {
+            "file": "HEATINDX.cbl",
+            "block": "DISPLAY-RESULTS",
+            "role": "display final value and advisory"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "HEATINDX.cbl",
+            "block": "OUTSIDE-TEMP-DATA-ENTRY",
+            "code": "if function test-numval(outside-temp-in) IS NOT EQUAL ZERO\nthen\n   display \"Temperature \" not-numeric\n   go to outside-temp-data-entry\nelse\n   compute outside-temp = function numval(outside-temp-in)\nend-if\n\nif outside-temp IS EQUAL ZERO\nthen\n   go to end-program\nend-if",
+            "supports_requirement": [
+              "REQ-055"
+            ]
+          },
+          {
+            "file": "HEATINDX.cbl",
+            "block": "CALCULATE-IT",
+            "code": "compute heat-index rounded = 0.5 * (outside-temp + 61.0 +\n        ((outside-temp - 68.0) * 1.2) + relative-humidity *\n        0.094)\n\ncompute heat-index rounded =\n        function mean(heat-index, outside-temp)\n\nevaluate TRUE\nwhen outside-temp IS GREATER THAN OR EQUAL TO 80 AND\n     outside-temp IS LESS THAN OR EQUAL TO 112 AND\n     relative-humidity IS LESS THAN 13",
+            "supports_requirement": [
+              "REQ-055"
+            ]
+          },
+          {
+            "file": "HEATINDX.cbl",
+            "block": "DISPLAY-RESULTS",
+            "code": "display \"Outdoor Temperature: \" outside-temp-out \" degF\"\ndisplay \"Relative Humidity: \" relative-humidity-out \"%\"\ndisplay \"Heat Index: \" heat-index-out \" degF\"\n\nevaluate TRUE\nwhen heat-index >= 105 AND heat-index < 130\n   display spaces\n   display \"**** DANGER - Sunstroke, muscle cramps,     ****\"",
+            "supports_requirement": [
+              "REQ-055"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the program validates both inputs, computes the heat index using the simple formula and the conditional regression/adjustment paths, and then emits the advisory message based on the final heat index value."
+      }
+    },
+    {
+      "id": "REQ-056",
+      "requirement": "The system shall validate air temperature and wind speed, then compute wind chill and display the result in degrees Fahrenheit.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "WINDCHIL.cbl",
+            "block": "DISPLAY-TITLE-SCREEN",
+            "role": "introduce the calculation utility"
+          },
+          {
+            "file": "WINDCHIL.cbl",
+            "block": "OUTSIDE-TEMP-DATA-ENTRY",
+            "role": "validate outside temperature"
+          },
+          {
+            "file": "WINDCHIL.cbl",
+            "block": "WIND-SPEED-DATA-ENTRY",
+            "role": "validate wind speed"
+          },
+          {
+            "file": "WINDCHIL.cbl",
+            "block": "CALCULATE-IT",
+            "role": "calculate wind chill"
+          },
+          {
+            "file": "WINDCHIL.cbl",
+            "block": "DISPLAY-RESULTS",
+            "role": "display the computed values"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "WINDCHIL.cbl",
+            "block": "OUTSIDE-TEMP-DATA-ENTRY",
+            "code": "if function test-numval(outside-temp-in) IS NOT EQUAL ZERO\nthen\n   display \"Temperature \" not-numeric\n   go to outside-temp-data-entry\nelse\n   compute outside-temp = function numval(outside-temp-in)\nend-if\n\nif outside-temp > max-temp\n   display \"Temperature \" too-much max-temp \" degF.\"",
+            "supports_requirement": [
+              "REQ-056"
+            ]
+          },
+          {
+            "file": "WINDCHIL.cbl",
+            "block": "WIND-SPEED-DATA-ENTRY",
+            "code": "if function test-numval(wind-speed-in)\nIS NOT EQUAL ZERO then\n   display \"Wind speed \" not-numeric\n   display spaces\n   go to wind-speed-data-entry\nelse\n   compute wind-speed =\n            function numval(wind-speed-in)\nend-if",
+            "supports_requirement": [
+              "REQ-056"
+            ]
+          },
+          {
+            "file": "WINDCHIL.cbl",
+            "block": "CALCULATE-IT",
+            "code": "compute wind-chill rounded =\n                            cf1 +\n                            cf2 * outside-temp -\n                            cf3 * wind-speed ** 0.16 +\n                            cf4 * outside-temp * wind-speed ** 0.16\n\nmove wind-chill to wind-chill-out.",
+            "supports_requirement": [
+              "REQ-056"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because both user inputs are range-checked before computation, the wind chill formula is applied directly, and the result is moved to an output field for display."
+      }
+    },
+    {
+      "id": "REQ-057",
+      "requirement": "The system shall accept thermistor resistance, reject invalid or out-of-range values, and convert the resistance into both Fahrenheit and Celsius temperatures.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "THRMST3K.cbl",
+            "block": "MAIN-PARA",
+            "role": "entry and validation loop"
+          },
+          {
+            "file": "THRMST3K.cbl",
+            "block": "DATA-ENTRY",
+            "role": "validate resistance input"
+          },
+          {
+            "file": "THRMST3K.cbl",
+            "block": "CALCULATE-TEMPERATURE",
+            "role": "compute temperature outputs"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "THRMST3K.cbl",
+            "block": "DATA-ENTRY",
+            "code": "IF FUNCTION TEST-NUMVAL(USER-INPUT) IS NOT EQUAL ZERO THEN\n   DISPLAY \"Sensor Resistance\" not-numeric\n   MOVE 'F' TO VALID-NUMBER-FLAG\nELSE\n   COMPUTE SENSOR-RESISTANCE = FUNCTION NUMVAL(USER-INPUT)\nEND-IF\n\nIF SENSOR-RESISTANCE > MAX-VAL THEN\n   DISPLAY QUANTITY-TOO-MUCH",
+            "supports_requirement": [
+              "REQ-057"
+            ]
+          },
+          {
+            "file": "THRMST3K.cbl",
+            "block": "CALCULATE-TEMPERATURE",
+            "code": "COMPUTE DEG-F = 8.5557106 * FUNCTION EXP10(-23) *\n                SENSOR-RESISTANCE ** 6 -\n                5.68981649695 * FUNCTION EXP10(-18) *\n                SENSOR-RESISTANCE ** 5 +\n                1.50180247230692 * FUNCTION EXP10(-13) *\n                SENSOR-RESISTANCE ** 4",
+            "supports_requirement": [
+              "REQ-057"
+            ]
+          },
+          {
+            "file": "THRMST3K.cbl",
+            "block": "CALCULATE-TEMPERATURE",
+            "code": "MOVE DEG-F TO DEG-F-OUT\nMOVE DEG-C TO DEG-C-OUT\nDISPLAY DEG-F-OUT \" degF\"\nDISPLAY DEG-C-OUT \" degC\".",
+            "supports_requirement": [
+              "REQ-057"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the program validates the resistance input, evaluates two polynomial temperature models, and prints both converted temperature values."
+      }
+    },
+    {
+      "id": "REQ-058",
+      "requirement": "The system shall validate frequency and capacitance values, convert capacitance from microfarads to farads, and compute capacitive reactance.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "CAPREACT.cbl",
+            "block": "DISPLAY-TITLE-SCREEN",
+            "role": "start the reactance calculator"
+          },
+          {
+            "file": "CAPREACT.cbl",
+            "block": "FREQUENCY-DATA-ENTRY",
+            "role": "validate frequency"
+          },
+          {
+            "file": "CAPREACT.cbl",
+            "block": "CAPACITANCE-DATA-ENTRY",
+            "role": "validate capacitance"
+          },
+          {
+            "file": "CAPREACT.cbl",
+            "block": "CALCULATE-REACTANCE",
+            "role": "convert units and compute Xc"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "CAPREACT.cbl",
+            "block": "FREQUENCY-DATA-ENTRY",
+            "code": "if function test-numval(freq-in) IS NOT EQUAL ZERO then\n   display \"Frequency \" not-numeric\n   go to frequency-data-entry\nelse\n   compute f = function numval(freq-in)\nend-if\n\nif f > max-freq\n   display freq-too-much",
+            "supports_requirement": [
+              "REQ-058"
+            ]
+          },
+          {
+            "file": "CAPREACT.cbl",
+            "block": "CAPACITANCE-DATA-ENTRY",
+            "code": "if function test-numval(cap-in) IS NOT EQUAL ZERO then\n   display \"Capacitance \" not-numeric\n   display spaces\n   go to capacitance-data-entry\nelse\n   compute c = function numval(cap-in)\nend-if\n\nif c > max-cap\n   display cap-too-much",
+            "supports_requirement": [
+              "REQ-058"
+            ]
+          },
+          {
+            "file": "CAPREACT.cbl",
+            "block": "CALCULATE-REACTANCE",
+            "code": "divide 1000000 into c\ncompute xc = 2 * function pi * f * c\ndivide 1 into xc\n\nmove xc to xc-out\ndisplay spaces\ndisplay \"Xc is \" xc-out \" ohms\".",
+            "supports_requirement": [
+              "REQ-058"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because both inputs are checked before use, the capacitance is normalized to farads, and the final reactance value is computed and displayed."
+      }
+    },
+    {
+      "id": "REQ-059",
+      "requirement": "The system shall let the user choose which Ohm's law value to compute, validate the required inputs, and scale the result into appropriate engineering units.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "OHMSLAW.cbl",
+            "block": "MAIN-PARAGRAPH",
+            "role": "start the calculation flow"
+          },
+          {
+            "file": "OHMSLAW.cbl",
+            "block": "OPENING-SCREEN-DATA-ENTRY",
+            "role": "select the desired law"
+          },
+          {
+            "file": "OHMSLAW.cbl",
+            "block": "QUANTITY1-DATA-ENTRY",
+            "role": "collect the first numeric quantity"
+          },
+          {
+            "file": "OHMSLAW.cbl",
+            "block": "QUANTITY2-DATA-ENTRY",
+            "role": "collect the second numeric quantity"
+          },
+          {
+            "file": "OHMSLAW.cbl",
+            "block": "CALCULATE-IT",
+            "role": "compute R, I, or E and scale units"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "OHMSLAW.cbl",
+            "block": "OPENING-SCREEN-DATA-ENTRY",
+            "code": "evaluate true\nwhen law-in = \"0\" perform end-program\n\nwhen law-in = \"1\" or \"R\" or \"r\"\n       move \"voltage\"    to description1\n       move \"current\"    to description2\n       move \"resistance\" to description3\n       move 1 to law",
+            "supports_requirement": [
+              "REQ-059"
+            ]
+          },
+          {
+            "file": "OHMSLAW.cbl",
+            "block": "QUANTITY1-DATA-ENTRY",
+            "code": "if function test-numval(quantity1-in) IS NOT EQUAL ZERO then\n   display description1 not-numeric\n   go to quantity1-data-entry\nelse\n   compute quantity1 = function numval(quantity1-in)\nend-if\n\nwhen quantity1 IS EQUAL ZERO perform end-program",
+            "supports_requirement": [
+              "REQ-059"
+            ]
+          },
+          {
+            "file": "OHMSLAW.cbl",
+            "block": "CALCULATE-IT",
+            "code": "when 1 move quantity1 to voltage\n       move quantity2 to current\n       divide voltage by current giving resistance rounded\n       evaluate true\n         when resistance IS LESS THAN 1\n               multiply 1000 by resistance\n               move \" milliohms\" to unit1",
+            "supports_requirement": [
+              "REQ-059"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the program branches on the chosen law, validates the needed quantities, computes the requested electrical quantity, and adjusts the displayed unit based on magnitude."
+      }
+    },
+    {
+      "id": "REQ-060",
+      "requirement": "The system shall validate two pulley diameters and a belt length, then compute the belt length needed for a belt drive system.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "BELTLEN.cbl",
+            "block": "200-OPENING-SCREEN",
+            "role": "introduce the calculator"
+          },
+          {
+            "file": "BELTLEN.cbl",
+            "block": "300-PULLEY1-DATA-ENTRY",
+            "role": "validate pulley one diameter"
+          },
+          {
+            "file": "BELTLEN.cbl",
+            "block": "400-PULLEY2-DATA-ENTRY",
+            "role": "validate pulley two diameter"
+          },
+          {
+            "file": "BELTLEN.cbl",
+            "block": "500-PULLEY-DISTANCE-DATA-ENTRY",
+            "role": "validate pulley distance"
+          },
+          {
+            "file": "BELTLEN.cbl",
+            "block": "600-CALCULATE-IT",
+            "role": "compute belt length"
+          },
+          {
+            "file": "BELTLEN.cbl",
+            "block": "700-DISPLAY-RESULTS",
+            "role": "display belt length"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "BELTLEN.cbl",
+            "block": "300-PULLEY1-DATA-ENTRY",
+            "code": "if function test-numval(pulley-diameter1-in)\n   IS NOT EQUAL ZERO then\n   display \"Previous \" description not-numeric\n   perform 300-pulley1-data-entry\nelse\n   compute pulley-diameter1 =\n           function numval(pulley-diameter1-in)\nend-if",
+            "supports_requirement": [
+              "REQ-060"
+            ]
+          },
+          {
+            "file": "BELTLEN.cbl",
+            "block": "600-CALCULATE-IT",
+            "code": "compute belt-length rounded = function pi *\n   (pulley-diameter1 + pulley-diameter2) * 0.5 +\n   (pulley-distance * 2) +\n   (function abs(pulley-diameter2 - pulley-diameter1) ** 2 /\n   (pulley-distance * 4)).",
+            "supports_requirement": [
+              "REQ-060"
+            ]
+          },
+          {
+            "file": "BELTLEN.cbl",
+            "block": "700-DISPLAY-RESULTS",
+            "code": "move belt-length to belt-length-out\n\ndisplay \"Belt Length: \" belt-length-out.",
+            "supports_requirement": [
+              "REQ-060"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the program validates all three inputs and then applies the belt-length formula before emitting the result."
+      }
+    },
+    {
+      "id": "REQ-061",
+      "requirement": "The system shall validate pulley diameters and belt length, then compute the pulley center distance required for the belt drive.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "PULLYDIS.cbl",
+            "block": "100-MAIN-PARAGRAPH",
+            "role": "orchestrate the entire calculation flow"
+          },
+          {
+            "file": "PULLYDIS.cbl",
+            "block": "300-PULLEY1-DATA-ENTRY",
+            "role": "validate first pulley diameter"
+          },
+          {
+            "file": "PULLYDIS.cbl",
+            "block": "400-PULLEY2-DATA-ENTRY",
+            "role": "validate second pulley diameter"
+          },
+          {
+            "file": "PULLYDIS.cbl",
+            "block": "500-BELT-LENGTH-DATA-ENTRY",
+            "role": "validate belt length"
+          },
+          {
+            "file": "PULLYDIS.cbl",
+            "block": "600-CALCULATE-IT",
+            "role": "solve for pulley distance"
+          },
+          {
+            "file": "PULLYDIS.cbl",
+            "block": "700-DISPLAY-RESULTS",
+            "role": "display computed distance"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "PULLYDIS.cbl",
+            "block": "500-BELT-LENGTH-DATA-ENTRY",
+            "code": "if function test-numval(belt-length-in)\n   IS NOT EQUAL ZERO then\n   display \"Previous \" description not-numeric\n   perform 500-belt-length-data-entry\nelse\n   compute belt-length =\n           function numval(belt-length-in)\nend-if",
+            "supports_requirement": [
+              "REQ-061"
+            ]
+          },
+          {
+            "file": "PULLYDIS.cbl",
+            "block": "600-CALCULATE-IT",
+            "code": "compute x rounded = (4 * belt-length) -\n                    (2 * function pi * pulley-diameter-sum)\n\ncompute numerator rounded = x + function sqrt(x ** 2 - 32 *\n         (pulley-diameter-diff ** 2))\n\ndivide numerator by denominator\n         giving pulley-distance rounded.",
+            "supports_requirement": [
+              "REQ-061"
+            ]
+          },
+          {
+            "file": "PULLYDIS.cbl",
+            "block": "700-DISPLAY-RESULTS",
+            "code": "move pulley-distance to pulley-distance-out\n\ndisplay \"Pulley Distance: \" pulley-distance-out.",
+            "supports_requirement": [
+              "REQ-061"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the program validates each input and then directly solves the pulley-distance equation before displaying the answer."
+      }
+    },
+    {
+      "id": "REQ-062",
+      "requirement": "The system shall read a frequency record file, filter records whose city field contains the target keyword, write matching records to the output file, and close both files at end of input.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "FLTRFREQ.cbl",
+            "block": "100-PRIMARY",
+            "role": "coordinate open, header, read, and close steps"
+          },
+          {
+            "file": "FLTRFREQ.cbl",
+            "block": "105-OPEN-FILES",
+            "role": "open input and output files"
+          },
+          {
+            "file": "FLTRFREQ.cbl",
+            "block": "110-OBTAIN-CURRENT-DATE",
+            "role": "build and write report header"
+          },
+          {
+            "file": "FLTRFREQ.cbl",
+            "block": "120-EXTRACT-FIELDS-FROM-RECORD",
+            "role": "read and parse the input record"
+          },
+          {
+            "file": "FLTRFREQ.cbl",
+            "block": "121-SEARCH-FOR-STRINGS",
+            "role": "filter matching city names"
+          },
+          {
+            "file": "FLTRFREQ.cbl",
+            "block": "130-CREATE-OUTPUT-RECORD",
+            "role": "move parsed fields into output layout"
+          },
+          {
+            "file": "FLTRFREQ.cbl",
+            "block": "140-WRITE-RECORD",
+            "role": "write the filtered record"
+          },
+          {
+            "file": "FLTRFREQ.cbl",
+            "block": "190-CLOSE-FILES",
+            "role": "close both datasets"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "FLTRFREQ.cbl",
+            "block": "120-EXTRACT-FIELDS-FROM-RECORD",
+            "code": "read freq-in-file\n   at end move \"Y\" to end-of-file-flag\nend-read\n\nmove freq-in to ws-freq-in-record\nperform 121-search-for-strings.",
+            "supports_requirement": [
+              "REQ-062"
+            ]
+          },
+          {
+            "file": "FLTRFREQ.cbl",
+            "block": "121-SEARCH-FOR-STRINGS",
+            "code": "move zero to counter\nmove function lower-case(ws-freq-in-city) to\n                                                  inspected-record\ninspect inspected-record tallying counter for all\n         search-string-1.\n\nif counter is greater than zero then\n   perform 130-create-output-record thru 140-write-record\nend-if.",
+            "supports_requirement": [
+              "REQ-062"
+            ]
+          },
+          {
+            "file": "FLTRFREQ.cbl",
+            "block": "140-WRITE-RECORD",
+            "code": "move ws-fltr-out-record to freq-filtered\nadd 1 to total\nwrite freq-filtered after advancing 1 line.\n\n190-close-files.\n   close freq-in-file\n   close freq-filtered-file.",
+            "supports_requirement": [
+              "REQ-062"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the program opens both files, reads and parses each record, filters on the target city string, writes qualifying output, and then closes the files cleanly."
+      }
+    },
+    {
+      "id": "REQ-063",
+      "requirement": "The system shall also filter using a second keyword branch in the same report pipeline.",
+      "ground_truth": {
+        "status": "PARTIALLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "FLTRFREQ.cbl",
+            "block": "121-SEARCH-FOR-STRINGS",
+            "role": "primary filtering block"
+          },
+          {
+            "file": "FLTRFREQ.cbl",
+            "block": "121-SEARCH-FOR-STRINGS",
+            "role": "second search branch remains commented out"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "FLTRFREQ.cbl",
+            "block": "121-SEARCH-FOR-STRINGS",
+            "code": "*     move zero to counter\n*     inspect inspected-title tallying counter for all\n*              search-string-2\n\n*     if counter is greater than zero then\n*        perform 130-create-output-record thru 140-write-record\n*     end-if.",
+            "supports_requirement": [
+              "REQ-063"
+            ]
+          },
+          {
+            "file": "FLTRFREQ.cbl",
+            "block": "121-SEARCH-FOR-STRINGS",
+            "code": "if counter is greater than zero then\n   perform 130-create-output-record thru 140-write-record\nend-if.\n\n*     move zero to counter\n*     inspect inspected-title tallying counter for all\n*              search-string-2",
+            "supports_requirement": [
+              "REQ-063"
+            ]
+          }
+        ],
+        "rationale": "This requirement is only partially implemented because the code shows an intended second filter path, but that logic is commented out and never executed."
+      }
+    },
+    {
+      "id": "REQ-064",
+      "requirement": "The system shall initialize the elevator car, accept floor commands, move between floors when a valid destination is requested, and open the elevator when the open command is entered.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ELEVATOR.cbl",
+            "block": "MAIN",
+            "role": "initialize state and process user commands"
+          },
+          {
+            "file": "ELEVATOR.cbl",
+            "block": "120-INITIALIZE-ELEVATOR-CAR",
+            "role": "load the selected floor into the elevator layout"
+          },
+          {
+            "file": "ELEVATOR.cbl",
+            "block": "100-DISPLAY-CLOSED-ELEVATOR",
+            "role": "show the closed car"
+          },
+          {
+            "file": "ELEVATOR.cbl",
+            "block": "110-DISPLAY-OPEN-ELEVATOR",
+            "role": "show the open car"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ELEVATOR.cbl",
+            "block": "MAIN",
+            "code": "MOVE 1 TO CURRENT-FLOOR\nMOVE CURRENT-FLOOR TO ELEVATOR-CMD\nPERFORM 120-INITIALIZE-ELEVATOR-CAR\nPERFORM WITH TEST AFTER UNTIL ELEVATOR-CMD IS EQUAL TO 'O'\n   DISPLAY \"You are currently on floor #\" CURRENT-FLOOR\n   ACCEPT ELEVATOR-CMD\n   EVALUATE TRUE",
+            "supports_requirement": [
+              "REQ-064"
+            ]
+          },
+          {
+            "file": "ELEVATOR.cbl",
+            "block": "MAIN",
+            "code": "WHEN ELEVATOR-CMD IS NUMERIC AND\n     ELEVATOR-CMD IS GREATER THAN ZERO\n   PERFORM 120-INITIALIZE-ELEVATOR-CAR\n   PERFORM 100-DISPLAY-CLOSED-ELEVATOR\n   DISPLAY SPACES\n   EVALUATE TRUE\n   WHEN DESIRED-FLOOR IS GREATER THAN TOP-FLOOR OR\n        DESIRED-FLOOR IS LESS THAN BOTTOM-FLOOR",
+            "supports_requirement": [
+              "REQ-064"
+            ]
+          },
+          {
+            "file": "ELEVATOR.cbl",
+            "block": "120-INITIALIZE-ELEVATOR-CAR",
+            "code": "MOVE ELEVATOR-CMD TO DESIRED-FLOOR\nMOVE DESIRED-FLOOR TO\n     FLOOR-NUMBER IN FLOOR-NUMBER-GRAPHIC\nMOVE FLOOR-NUMBER-GRAPHIC TO\n     FLOOR-GRAPHIC IN OPEN-ELEVATOR-CAR.",
+            "supports_requirement": [
+              "REQ-064"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the main loop handles command input, the elevator car is initialized for each move, and the code renders both closed and open elevator states."
+      }
+    },
+    {
+      "id": "REQ-065",
+      "requirement": "The system shall validate old and new fuel efficiency values and compute the percentage fuel savings when the new efficiency is higher.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "FUELSAVE.cbl",
+            "block": "DISPLAY-TITLE-SCREEN",
+            "role": "introduce the savings calculator"
+          },
+          {
+            "file": "FUELSAVE.cbl",
+            "block": "OLD-EFF-DATA-ENTRY",
+            "role": "validate the old efficiency input"
+          },
+          {
+            "file": "FUELSAVE.cbl",
+            "block": "NEW-EFF-DATA-ENTRY",
+            "role": "validate the new efficiency input"
+          },
+          {
+            "file": "FUELSAVE.cbl",
+            "block": "CALCULATE-IT",
+            "role": "compute percentage savings"
+          },
+          {
+            "file": "FUELSAVE.cbl",
+            "block": "DISP-RESULT",
+            "role": "display the savings summary"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "FUELSAVE.cbl",
+            "block": "NEW-EFF-DATA-ENTRY",
+            "code": "if neweff = oldeff\n       display quantities-equal1 quantities-equal2\n       go to end-program\nend-if\n\nif neweff < oldeff\n       display quantity-lower1 quantity-lower2\n       go to end-program\nend-if.",
+            "supports_requirement": [
+              "REQ-065"
+            ]
+          },
+          {
+            "file": "FUELSAVE.cbl",
+            "block": "CALCULATE-IT",
+            "code": "subtract oldeff from neweff giving numerator\ndivide numerator by neweff giving pcteff rounded\n\nmultiply 100 by pcteff",
+            "supports_requirement": [
+              "REQ-065"
+            ]
+          },
+          {
+            "file": "FUELSAVE.cbl",
+            "block": "DISP-RESULT",
+            "code": "display \"Old Efficiency: \" old-eff-out \"%\"\ndisplay \"New Efficiency: \" new-eff-out \"%\"\ndisplay \"Fuel Savings: \" pct-eff-out \"%\".",
+            "supports_requirement": [
+              "REQ-065"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the program validates both efficiency inputs, stops early when the new value is not greater than the old one, and computes the savings percentage only when the improvement is valid."
+      }
+    },
+    {
+      "id": "REQ-066",
+      "requirement": "The system shall validate principal, interest rate, and term, then compute the future value of a savings account using monthly compounding.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "SAVINGS.cbl",
+            "block": "DISPLAY-TITLE-SCREEN",
+            "role": "start the savings calculator"
+          },
+          {
+            "file": "SAVINGS.cbl",
+            "block": "PRESENT-VALUE-DATA-ENTRY",
+            "role": "validate the principal"
+          },
+          {
+            "file": "SAVINGS.cbl",
+            "block": "INTEREST-RATE-DATA-ENTRY",
+            "role": "validate the interest rate"
+          },
+          {
+            "file": "SAVINGS.cbl",
+            "block": "TERM-DATA-ENTRY",
+            "role": "validate the term"
+          },
+          {
+            "file": "SAVINGS.cbl",
+            "block": "CALCULATE-IT",
+            "role": "convert annual to monthly values and compute future value"
+          },
+          {
+            "file": "SAVINGS.cbl",
+            "block": "DISP-RESULT",
+            "role": "display the final balance"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "SAVINGS.cbl",
+            "block": "TERM-DATA-ENTRY",
+            "code": "if annual-term > max-term then\n   display term-too-long\n   display spaces\n   go to term-data-entry\nend-if\n\nif annual-term < min-term then\n   display term-too-short\n   display spaces\n   go to term-data-entry\nend-if",
+            "supports_requirement": [
+              "REQ-066"
+            ]
+          },
+          {
+            "file": "SAVINGS.cbl",
+            "block": "CALCULATE-IT",
+            "code": "divide annual-interest by 100 giving annual-interest rounded\nmultiply 12 by annual-term giving loan-term-months\ndivide annual-interest by 12 giving monthly-interest rounded\n\ncompute denominator = (1 + monthly-interest) **\n                                                    loan-term-months\n\ncompute future-value = present-value * denominator",
+            "supports_requirement": [
+              "REQ-066"
+            ]
+          },
+          {
+            "file": "SAVINGS.cbl",
+            "block": "DISP-RESULT",
+            "code": "display \"Principal: \" principal\ndisplay \"Interest Rate: \" interest-rate \"%\"\ndisplay t loan-term-out y months-out m\ndisplay \"Future Value: \" fv-out.",
+            "supports_requirement": [
+              "REQ-066"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the program validates all three inputs, transforms the annual interest into monthly compounding terms, and computes the future value directly."
+      }
+    },
+    {
+      "id": "REQ-067",
+      "requirement": "The system shall validate principal, interest rate, and term, then compute the annual loan payment equivalent and total cost of the loan.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "LOANPYMT.cbl",
+            "block": "DISPLAY-TITLE-SCREEN",
+            "role": "start the loan payment calculator"
+          },
+          {
+            "file": "LOANPYMT.cbl",
+            "block": "PRESENT-VALUE-DATA-ENTRY",
+            "role": "validate principal"
+          },
+          {
+            "file": "LOANPYMT.cbl",
+            "block": "INTEREST-RATE-DATA-ENTRY",
+            "role": "validate interest rate"
+          },
+          {
+            "file": "LOANPYMT.cbl",
+            "block": "TERM-DATA-ENTRY",
+            "role": "validate term"
+          },
+          {
+            "file": "LOANPYMT.cbl",
+            "block": "CALCULATE-IT",
+            "role": "compute annual worth, total cost, and output values"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "LOANPYMT.cbl",
+            "block": "CALCULATE-IT",
+            "code": "multiply annual-term by 12 giving LOAN-TERM-MONTHS\ndivide annual-interest by 12 giving MONTHLY-INTEREST\n\ncompute denominator = (1 + monthly-interest) **\n                                loan-term-months - 1\n\ncompute numerator = monthly-interest *\n                        (1 + monthly-interest) ** loan-term-months",
+            "supports_requirement": [
+              "REQ-067"
+            ]
+          },
+          {
+            "file": "LOANPYMT.cbl",
+            "block": "CALCULATE-IT",
+            "code": "compute ANNUAL-WORTH  = present-value *\n                                (numerator / denominator)\n\nmultiply annual-worth by loan-term-months\n         giving total-cost\n\nmove total-cost to total-cost-out\nmove annual-worth to aw-out",
+            "supports_requirement": [
+              "REQ-067"
+            ]
+          },
+          {
+            "file": "LOANPYMT.cbl",
+            "block": "PRESENT-VALUE-DATA-ENTRY",
+            "code": "if function test-numval(pv-in) IS NOT EQUAL ZERO then\n   display \"Principal\" not-numeric\n   display spaces\n   go to present-value-data-entry\nelse\n   compute present-value = function numval(pv-in)\nend-if",
+            "supports_requirement": [
+              "REQ-067"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the code validates the required values, computes annual-worth style payment information, and derives the total loan cost from that result."
+      }
+    },
+    {
+      "id": "REQ-068",
+      "requirement": "The system shall validate annual uniform series cash flow, interest rate, and term, then compute the present value needed to fund the series.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "FPGA.cbl",
+            "block": "DISPLAY-TITLE-SCREEN",
+            "role": "start the present value calculator"
+          },
+          {
+            "file": "FPGA.cbl",
+            "block": "ANNUAL-WORTH-DATA-ENTRY",
+            "role": "validate the annual cash flow"
+          },
+          {
+            "file": "FPGA.cbl",
+            "block": "INTEREST-RATE-DATA-ENTRY",
+            "role": "validate interest rate"
+          },
+          {
+            "file": "FPGA.cbl",
+            "block": "TERM-DATA-ENTRY",
+            "role": "validate term"
+          },
+          {
+            "file": "FPGA.cbl",
+            "block": "CALCULATE-IT",
+            "role": "compute present value"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "FPGA.cbl",
+            "block": "ANNUAL-WORTH-DATA-ENTRY",
+            "code": "if function test-numval(aw-in) IS NOT EQUAL ZERO then\n   display \"Annual worth\" not-numeric\n   display spaces\n   go to annual-worth-data-entry\nelse\n   compute annual-worth = function numval(aw-in)\nend-if",
+            "supports_requirement": [
+              "REQ-068"
+            ]
+          },
+          {
+            "file": "FPGA.cbl",
+            "block": "CALCULATE-IT",
+            "code": "compute numerator = (1 + annual-interest) **\n        annual-term - 1\n\ncompute denominator = annual-interest *\n                      (1 + annual-interest) ** annual-term\n\ncompute PRESENT-VALUE = ANNUAL-WORTH *\n                        (numerator / denominator)",
+            "supports_requirement": [
+              "REQ-068"
+            ]
+          },
+          {
+            "file": "FPGA.cbl",
+            "block": "CALCULATE-IT",
+            "code": "move present-value to pv-out\n\ndisplay spaces\ndisplay \"Annual Uniform Series Cash Flow: \" aw-out\ndisplay \"Term: \" term-out \" years\"\ndisplay \"Interest Rate: \" interest-rate \"%\"\ndisplay \"You need to initially invest: \" pv-out.",
+            "supports_requirement": [
+              "REQ-068"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the input flow captures the annual series amount and the calculation block converts it into the present value using the compound-interest formula."
+      }
+    },
+    {
+      "id": "REQ-069",
+      "requirement": "The system shall validate present value, interest rate, and term, then compute the annual worth that can be withdrawn from the investment.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "FAGP.cbl",
+            "block": "DISPLAY-TITLE-SCREEN",
+            "role": "start the annual worth calculator"
+          },
+          {
+            "file": "FAGP.cbl",
+            "block": "PRESENT-VALUE-DATA-ENTRY",
+            "role": "validate the investment principal"
+          },
+          {
+            "file": "FAGP.cbl",
+            "block": "INTEREST-RATE-DATA-ENTRY",
+            "role": "validate interest rate"
+          },
+          {
+            "file": "FAGP.cbl",
+            "block": "TERM-DATA-ENTRY",
+            "role": "validate term"
+          },
+          {
+            "file": "FAGP.cbl",
+            "block": "CALCULATE-IT",
+            "role": "compute annual worth and display it"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "FAGP.cbl",
+            "block": "PRESENT-VALUE-DATA-ENTRY",
+            "code": "if function test-numval(pv-in) IS NOT EQUAL ZERO then\n   display \"Present value\" not-numeric\n   display spaces\n   go to present-value-data-entry\nelse\n   compute present-value = function numval(pv-in)\nend-if",
+            "supports_requirement": [
+              "REQ-069"
+            ]
+          },
+          {
+            "file": "FAGP.cbl",
+            "block": "CALCULATE-IT",
+            "code": "compute denominator = (1 + annual-interest) **\n                                annual-term - 1\n\ncompute numerator = annual-interest *\n                      (1 + annual-interest) ** annual-term\n\ncompute ANNUAL-WORTH  = present-value *\n                        (numerator / denominator)",
+            "supports_requirement": [
+              "REQ-069"
+            ]
+          },
+          {
+            "file": "FAGP.cbl",
+            "block": "CALCULATE-IT",
+            "code": "move annual-worth to aw-out\n\ndisplay spaces\ndisplay \"Your initial investment of: \" pv-out\ndisplay \"Term: \" term-out \" years\"\ndisplay \"Interest Rate: \" interest-rate \"%\"\ndisplay \"You can annually withdraw: \" aw-out.",
+            "supports_requirement": [
+              "REQ-069"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the program validates all financial inputs and then applies the annual-worth formula to derive the withdrawal amount."
+      }
+    },
+    {
+      "id": "REQ-070",
+      "requirement": "The system shall generate a random die value, then display the matching ASCII-art face for that die roll.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "ROLLDICE.cbl",
+            "block": "100-MAIN-PARA",
+            "role": "run the title and roll display sequence"
+          },
+          {
+            "file": "ROLLDICE.cbl",
+            "block": "120-ROLL-THE-DIE",
+            "role": "generate a random die value"
+          },
+          {
+            "file": "ROLLDICE.cbl",
+            "block": "130-DISPLAY-DIE",
+            "role": "render the face for the selected value"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "ROLLDICE.cbl",
+            "block": "120-ROLL-THE-DIE",
+            "code": "move function current-date to datetime\ncompute random-num-in = function random(hund-sec)\nmultiply 6 by random-num-in giving cast\nadd 1 to cast.",
+            "supports_requirement": [
+              "REQ-070"
+            ]
+          },
+          {
+            "file": "ROLLDICE.cbl",
+            "block": "130-DISPLAY-DIE",
+            "code": "perform varying counter from 1 by 1 until last-row\n      evaluate cast\n         when 1\n              display die-side-one(counter)\n         when 2\n              display die-side-two(counter)\n         when 3\n              display die-side-three(counter)",
+            "supports_requirement": [
+              "REQ-070"
+            ]
+          },
+          {
+            "file": "ROLLDICE.cbl",
+            "block": "130-DISPLAY-DIE",
+            "code": "when 6\n     display die-side-six(counter)\nwhen other\n   display \"Oops! This wasn't supposed to happen!\"\nend-evaluate.",
+            "supports_requirement": [
+              "REQ-070"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the die value is generated randomly and the program selects the corresponding ASCII-art table row by row for display."
+      }
+    },
+    {
+      "id": "REQ-071",
+      "requirement": "The system shall reverse the credit card number, split odd and even digits, double the even digits, and use the Luhn checksum to decide whether the number is valid.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "LUHN.cbl",
+            "block": "100-MAIN",
+            "role": "extract the check digit and prepare the reversed number"
+          },
+          {
+            "file": "LUHN.cbl",
+            "block": "200-LUHN",
+            "role": "split digits and build the checksum"
+          },
+          {
+            "file": "LUHN.cbl",
+            "block": "300-SHOW-RESULTS",
+            "role": "display valid or invalid"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "LUHN.cbl",
+            "block": "100-MAIN",
+            "code": "MOVE CC-NUM (16:1) TO CHECK-DIGIT.\nMOVE FUNCTION REVERSE(CC-NUM) TO TEST-NUM\nPERFORM 200-LUHN\nPERFORM 300-SHOW-RESULTS\nSTOP RUN.",
+            "supports_requirement": [
+              "REQ-071"
+            ]
+          },
+          {
+            "file": "LUHN.cbl",
+            "block": "200-LUHN",
+            "code": "PERFORM VARYING DIGIT-COUNTER FROM 1 BY 1\n        UNTIL DIGIT-COUNTER IS GREATER THAN 16\n   IF FUNCTION MOD(DIGIT-COUNTER 2) IS EQUAL TO ZERO THEN\n      MOVE TEST-NUM(DIGIT-COUNTER:1)\n         TO EVEN-DIGIT(EVEN-IDX)\n      ADD 1 TO EVEN-IDX\n   ELSE",
+            "supports_requirement": [
+              "REQ-071"
+            ]
+          },
+          {
+            "file": "LUHN.cbl",
+            "block": "200-LUHN",
+            "code": "MULTIPLY EVEN-DIGIT(EVEN-IDX) BY 2\n   GIVING DBL-DIGIT(EVEN-IDX)\nIF DBL-DIGIT(EVEN-IDX) IS GREATER THAN 9 THEN\n   SUBTRACT 9 FROM DBL-DIGIT(EVEN-IDX)\nEND-IF\nADD DBL-DIGIT(EVEN-IDX) TO CHECKSUM\nEND-PERFORM\n\nCOMPUTE PASS-FAIL = FUNCTION MOD(CHECKSUM 10).",
+            "supports_requirement": [
+              "REQ-071"
+            ]
+          },
+          {
+            "file": "LUHN.cbl",
+            "block": "300-SHOW-RESULTS",
+            "code": "IF PASS THEN\n   DISPLAY \" VALID\"\nELSE\n   DISPLAY \" INVALID\"\nEND-IF.",
+            "supports_requirement": [
+              "REQ-071"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the program follows the Luhn algorithm steps end to end and then prints the validity verdict."
+      }
+    },
+    {
+      "id": "REQ-072",
+      "requirement": "The system shall build a random five-digit board game, let the player place each digit into a chosen position, sort the generated digits to find the best possible number, and award a reward based on the outcome.",
+      "ground_truth": {
+        "status": "FULLY_IMPLEMENTED",
+        "chain": [
+          {
+            "file": "BIGNUM.cbl",
+            "block": "100-MAIN-PARAGRAPH",
+            "role": "set up the game state and enter the play loop"
+          },
+          {
+            "file": "BIGNUM.cbl",
+            "block": "120-CONDITIONAL",
+            "role": "clear tables, take a bet, generate digits, and process placement"
+          },
+          {
+            "file": "BIGNUM.cbl",
+            "block": "400-OBTAIN-RANDOM-NUMBER",
+            "role": "seed and generate random digits"
+          },
+          {
+            "file": "BIGNUM.cbl",
+            "block": "500-FILL-BOARD-TABLES-LOOP",
+            "role": "populate the board digit tables"
+          },
+          {
+            "file": "BIGNUM.cbl",
+            "block": "700-PLAYER-PLACES-NUMBERS-LOOP",
+            "role": "accept player placement choices"
+          },
+          {
+            "file": "BIGNUM.cbl",
+            "block": "800-BOARD-FULL",
+            "role": "compare the player result and compute reward"
+          }
+        ],
+        "evidence": [
+          {
+            "file": "BIGNUM.cbl",
+            "block": "300-PLACE-YOUR-BET",
+            "code": "accept player-in\nmove function lower-case(player-in) to player-in\n\nif player-in IS EQUAL TO \"h\" then\n   perform 310-instructions\n   go to 300-place-your-bet\nend-if\n\nif player-in IS EQUAL TO \"q\" then\n   move \"n\" to play-again-flag",
+            "supports_requirement": [
+              "REQ-072"
+            ]
+          },
+          {
+            "file": "BIGNUM.cbl",
+            "block": "400-OBTAIN-RANDOM-NUMBER",
+            "code": "move function current-date to datetime\nmove mi to f-m\nmove ss to f-s\nmove hs to f-h\nmove dt-factor to factor\n\ndivide 100000 into factor\ncompute random-num = function random\nadd factor to random-num.",
+            "supports_requirement": [
+              "REQ-072"
+            ]
+          },
+          {
+            "file": "BIGNUM.cbl",
+            "block": "710-PLACE-NUMBERS",
+            "code": "evaluate true\nwhen player-in is equal to \"a\"\n     if player-num(1) IS EQUAL TO space then\n        move board-num(table-idx) to player-num(1)\n     else\n        display occupied-msg\n        go to 710-place-numbers\n     end-if\n\nwhen player-in is equal to \"z\"\n     go to 9999-end-program",
+            "supports_requirement": [
+              "REQ-072"
+            ]
+          },
+          {
+            "file": "BIGNUM.cbl",
+            "block": "800-BOARD-FULL",
+            "code": "perform 810-move-alpha-to-numeric-loop varying table-idx\n        from 1 by 1 until table-idx = 6\n\nperform 820-move-table-digits-to-num\n\ndisplay spaces\ndisplay \"The board is full.\"\ndisplay \"Your number is: \" with no advancing\ndisplay playernum",
+            "supports_requirement": [
+              "REQ-072"
+            ]
+          },
+          {
+            "file": "BIGNUM.cbl",
+            "block": "830-CALCULATE-REWARD",
+            "code": "evaluate true\nwhen playernum is equal to biggestnum\n   multiply bet by 2 giving reward\n   display \"You made the largest number possible!\"\n\nwhen board-num(1) is equal to biggest-num(1)\n   multiply bet by 0.25 giving reward\n   display \"You got the first digit!\"\n\nwhen other\n   display \"Sorry, no money awarded this round.\"\nend-evaluate",
+            "supports_requirement": [
+              "REQ-072"
+            ]
+          }
+        ],
+        "rationale": "This requirement is satisfied because the program seeds randomness, fills the digit board, accepts the player's placement decisions, compares the final number to the best possible arrangement, and computes the reward accordingly."
+      }
+    }
+  ]
+}
